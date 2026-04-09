@@ -1,0 +1,261 @@
+{% extends 'layout.html' %}
+
+{% block title %}Gestión de Mesas - RestaurantPro{% endblock %}
+{% block header_title %}Infraestructura y Mesas{% endblock %}
+
+{% block content %}
+<style>
+/* Premium SaaS Tables */
+.table-premium { border-collapse: separate; border-spacing: 0 12px; margin-top: -12px; width: 100%; }
+.table-premium thead th { border: none; font-weight: 800; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 1px; color: #a3aed1; padding: 10px 20px; }
+.table-premium tbody tr { background-color: #fff; box-shadow: 0 5px 15px rgba(0,0,0,0.03); transition: all 0.2s; border-radius: 16px; position: relative;}
+.table-premium tbody tr:hover { transform: translateY(-3px); box-shadow: 0 10px 25px rgba(67, 24, 255, 0.08); }
+.table-premium tbody td { border: none; padding: 18px 20px; vertical-align: middle; color: #2b3674; font-weight: 600; }
+.table-premium tbody td:first-child { border-top-left-radius: 16px; border-bottom-left-radius: 16px; border-left: 4px solid transparent; }
+.table-premium tbody td:last-child { border-top-right-radius: 16px; border-bottom-right-radius: 16px; text-align: right; }
+.table-premium tbody tr:hover td:first-child { border-left-color: #4318ff; }
+
+/* Menú 3 puntos */
+.btn-action-dots { border: none; background: #f4f7fe; color: #a3aed1; border-radius: 50%; width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s; }
+.btn-action-dots:hover, .btn-action-dots:focus { background: #4318ff; color: white; box-shadow: 0 4px 10px rgba(67, 24, 255, 0.3); }
+
+/* Gradientes para Badges (Estados) */
+.badge-soft-free { background: linear-gradient(135deg, #05cd99 0%, #039b73 100%); color: white; padding: 6px 12px; border-radius: 8px; font-weight: 700; }
+.badge-soft-occupied { background: linear-gradient(135deg, #ee5d50 0%, #d63325 100%); color: white; padding: 6px 12px; border-radius: 8px; font-weight: 700; }
+.badge-soft-reserved { background: linear-gradient(135deg, #f6c000 0%, #d8a000 100%); color: #111; padding: 6px 12px; border-radius: 8px; font-weight: 800; }
+.badge-soft-maintenance { background: #e0e5f2; color: #2b3674; padding: 6px 12px; border-radius: 8px; font-weight: 800; border: 1px solid #d5dcf0; }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold text-dark mb-1">Mapa de Mesas</h4>
+        <p class="text-muted small fw-medium">Administra salones, capacidades y genera códigos QR.</p>
+    </div>
+    <button type="button" class="btn btn-primary btn-lg fw-bold px-4 shadow-sm" style="border-radius: 14px; background: #4318ff; border: none;" data-bs-toggle="modal" data-bs-target="#createTableModal">
+        <i class="bi bi-grid-3x3-gap-fill me-2"></i> Nueva Mesa
+    </button>
+</div>
+
+<div class="table-responsive hide-scrollbar" style="overflow-x: auto;">
+    <table class="table-premium">
+        <thead>
+            <tr>
+                <th>Identificador</th>
+                <th>Capacidad</th>
+                <th>Ubicación / Salón</th>
+                <th>Estado Actual</th>
+                <th class="text-end">Opciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for t in tables %}
+            <tr>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <div class="rounded-circle shadow-sm me-3 d-flex align-items-center justify-content-center" style="width: 45px; height: 45px; background: #f8f9fa; border: 2px solid #e2e8f0; color: #1b254b;">
+                            <span class="fw-extrabold fs-5">{{ t.number }}</span>
+                        </div>
+                        <div>
+                            <span class="d-block fw-bold text-dark fs-6">Mesa {{ t.number }}</span>
+                            {% if t.qr_code %}
+                            <small class="text-success fw-bold" style="font-size: 0.7rem;"><i class="bi bi-qr-code-scan me-1"></i> QR Activo</small>
+                            {% else %}
+                            <small class="text-danger fw-bold" style="font-size: 0.7rem;"><i class="bi bi-exclamation-circle me-1"></i> Sin QR</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <div class="d-flex align-items-center bg-light px-3 py-1 rounded-pill d-inline-block shadow-sm">
+                        <i class="bi bi-people-fill text-primary me-2"></i> <span class="fw-bold">{{ t.capacity }} pax</span>
+                    </div>
+                </td>
+                <td class="fw-bold text-dark">
+                    <i class="bi bi-geo-alt-fill text-muted me-1"></i> {{ t.location }}
+                </td>
+                <td>
+                    {% if t.status == 'free' %}<span class="badge-soft-free"><i class="bi bi-check-circle-fill me-1"></i> Libre</span>
+                    {% elif t.status == 'occupied' %}<span class="badge-soft-occupied"><i class="bi bi-record-circle-fill me-1"></i> Ocupada</span>
+                    {% elif t.status == 'reserved' %}<span class="badge-soft-reserved"><i class="bi bi-calendar-check-fill me-1"></i> Reservada</span>
+                    {% else %}<span class="badge-soft-maintenance"><i class="bi bi-tools me-1"></i> Mantenimiento</span>{% endif %}
+                </td>
+                <td>
+                    <div class="dropdown text-end">
+                        <button class="btn-action-dots" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-three-dots-vertical"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="border-radius: 16px; border: 1px solid #f4f7fe;">
+                            <li>
+                                <button type="button" class="dropdown-item fw-bold py-2 text-dark" data-bs-toggle="modal" data-bs-target="#qrModal{{ t.id }}">
+                                    <i class="bi bi-qr-code me-2 text-secondary"></i> Ver Código QR Mágico
+                                </button>
+                            </li>
+                            <li>
+                                <button type="button" class="dropdown-item fw-bold py-2 text-dark" data-bs-toggle="modal" data-bs-target="#editTableModal{{ t.id }}">
+                                    <i class="bi bi-sliders me-2 text-primary"></i> Ajustes
+                                </button>
+                            </li>
+                            <li><hr class="dropdown-divider opacity-10"></li>
+                            <li>
+                                <form action="{{ url_for('tables.delete', id=t.id) }}" method="POST" class="m-0" onsubmit="return confirm('¿Desmantelar esta mesa del sistema?');">
+                                    <button type="submit" class="dropdown-item fw-bold py-2 text-danger">
+                                        <i class="bi bi-trash-fill me-2"></i> Eliminar Mesa
+                                    </button>
+                                </form>
+                            </li>
+                        </ul>
+                    </div>
+                </td>
+            </tr>
+
+            <!-- Modales Mantenidos y Estilizados -->
+            <div class="modal fade" id="qrModal{{ t.id }}" tabindex="-1">
+                <div class="modal-dialog modal-sm modal-dialog-centered">
+                    <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+                        <div class="modal-header border-0 pb-0 pt-4 px-4 bg-light" style="border-radius: 20px 20px 0 0;">
+                            <h5 class="modal-title fw-bold text-dark"><i class="bi bi-qr-code-scan me-2 text-primary"></i>Mesa {{ t.number }}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body text-center pt-4 px-4">
+                            <p class="text-muted small mb-3 fw-bold">Carta Digital QR</p>
+                            
+                            {% if t.qr_code %}
+                                {% set qr_url = url_for('menu.view_menu', qr_code=t.qr_code, _external=True) %}
+                                <div class="bg-white p-3 border rounded-4 d-inline-block shadow-sm mb-3">
+                                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data={{ qr_url }}" alt="QR Mesa {{ t.number }}" class="img-fluid" id="qr-img-{{ t.id }}" style="border-radius: 8px;">
+                                </div>
+                                <br>
+                                <a href="{{ qr_url }}" target="_blank" class="text-decoration-none fw-bold small text-break" style="color: #4318ff;"><i class="bi bi-link-45deg me-1"></i>Abrir URL</a>
+                            {% else %}
+                                <div class="alert alert-warning py-3 mt-2 small fw-bold" style="border-radius: 12px; border:none; background: #fff5e6; color: #d8a000;">
+                                    <i class="bi bi-exclamation-triangle mb-2 fs-3 d-block"></i>
+                                    Aún sin QR. Edita la mesa y guarda para generarlo.
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="modal-footer border-0 pt-0 justify-content-center pb-4">
+                            {% if t.qr_code %}
+                            <button type="button" class="btn btn-dark px-4 py-2 w-100 fw-bold" style="border-radius: 14px;" onclick="imprimirQR('{{ t.number }}', 'qr-img-{{ t.id }}')">
+                                <i class="bi bi-printer-fill me-2"></i> Imprimir Display
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal fade" id="editTableModal{{ t.id }}" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+                        <form action="{{ url_for('tables.edit', id=t.id) }}" method="POST">
+                            <div class="modal-header border-0 bg-light pb-0 pt-4 px-4" style="border-radius: 20px 20px 0 0;">
+                                <h4 class="modal-title fw-bold"><i class="bi bi-sliders me-2 text-primary"></i>Configurar Mesa</h4>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body px-4 py-4">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold text-muted small">Número Físico</label>
+                                    <input type="number" class="form-control form-control-lg bg-light border-0" name="number" value="{{ t.number }}" required style="border-radius:12px;">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold text-muted small">Aforo (Personas)</label>
+                                    <input type="number" class="form-control form-control-lg bg-light border-0" name="capacity" value="{{ t.capacity }}" required style="border-radius:12px;">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold text-muted small">Ubicación / Salón</label>
+                                    <input type="text" class="form-control form-control-lg bg-light border-0" name="location" value="{{ t.location }}" placeholder="Ej: Terraza, Salón Principal" style="border-radius:12px;">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold text-muted small">Forzar Estado (Manual)</label>
+                                    <select class="form-select form-select-lg bg-light border-0" name="status" style="border-radius:12px;">
+                                        <option value="free" {% if t.status == 'free' %}selected{% endif %}>Libre</option>
+                                        <option value="occupied" {% if t.status == 'occupied' %}selected{% endif %}>Ocupada (En uso)</option>
+                                        <option value="reserved" {% if t.status == 'reserved' %}selected{% endif %}>Reservada</option>
+                                        <option value="maintenance" {% if t.status == 'maintenance' %}selected{% endif %}>Mantenimiento / Deshabilitada</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="modal-footer border-0 px-4 pb-4">
+                                <button type="button" class="btn btn-light fw-bold px-4" data-bs-dismiss="modal" style="border-radius: 12px;">Cancelar</button>
+                                <button type="submit" class="btn btn-primary fw-bold px-4" style="border-radius: 12px; background: #4318ff; border:none;">Guardar Cambios</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="modal fade" id="createTableModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+            <form action="{{ url_for('tables.create') }}" method="POST">
+                <div class="modal-header border-0 bg-light pb-0 pt-4 px-4" style="border-radius: 20px 20px 0 0;">
+                    <h4 class="modal-title fw-bold"><i class="bi bi-grid-3x3-gap-fill me-2 text-primary"></i>Añadir Interfaz Física</h4>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body px-4 py-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted small">Identificador (Número)</label>
+                        <input type="number" class="form-control form-control-lg bg-light border-0" name="number" required style="border-radius:12px;">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted small">Max Capacidad</label>
+                        <input type="number" class="form-control form-control-lg bg-light border-0" name="capacity" value="4" required style="border-radius:12px;">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted small">Sección</label>
+                        <input type="text" class="form-control form-control-lg bg-light border-0" name="location" placeholder="Ej: Terraza, VIP, Salón 1" style="border-radius:12px;">
+                    </div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4">
+                    <button type="button" class="btn btn-light fw-bold px-4" data-bs-dismiss="modal" style="border-radius: 12px;">Cancelar</button>
+                    <button type="submit" class="btn btn-primary fw-bold px-4" style="border-radius: 12px; background: #4318ff; border:none;">Crear Mesa Fija</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function imprimirQR(numeroMesa, imgId) {
+        const imgSrc = document.getElementById(imgId).src;
+        const nombreRestaurante = "{{ restaurant.name if restaurant else 'Nuestro Restaurante' }}";
+        const printWindow = window.open('', '_blank');
+        
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>QR Mesa ${numeroMesa}</title>
+                <style>
+                    body { display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; font-family: 'Inter', sans-serif; background-color: #f8f9fa; }
+                    .card { background: white; border: 4px dashed #1b254b; padding: 50px 40px; border-radius: 30px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.1); width: 400px; }
+                    h1 { font-size: 60px; margin: 0; color: #1b254b; text-transform: uppercase; font-weight: 900; }
+                    h2 { font-size: 26px; color: #4318ff; margin: 10px 0 20px 0; font-weight: 800; text-transform: uppercase; letter-spacing: 2px;}
+                    img { width: 280px; height: 280px; margin: 30px 0; border-radius: 16px; border: 4px solid #f4f7fe; padding: 10px;}
+                    p { font-size: 18px; color: #a3aed1; margin: 8px 0; font-weight: 700; }
+                    hr { border: 2px dashed #f4f7fe; margin: 30px 0; }
+                    @media print { body { background-color: white; } .card { border: 2px solid #000; box-shadow: none; border-radius: 0;} hr {border-color: #eee;} h2 { color: #000; } }
+                </style>
+            </head>
+            <body>
+                <div class="card">
+                    <h2>${nombreRestaurante}</h2>
+                    <h1>MESA ${numeroMesa}</h1>
+                    <hr>
+                    <img src="${imgSrc}" onload="window.print(); window.close();">
+                    <p>1. Abre tu cámara</p>
+                    <p>2. Escanea el código</p>
+                    <p style="color: #4318ff; font-weight: 900; margin-top: 20px;">¡PIDE DIRECTO A COCINA!</p>
+                </div>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+    }
+</script>
+{% endblock %}

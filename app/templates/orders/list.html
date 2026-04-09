@@ -1,0 +1,116 @@
+{% extends 'layout.html' %}
+
+{% block title %}Pedidos - RestaurantPro{% endblock %}
+{% block header_title %}Control e Historial de Pedidos{% endblock %}
+
+{% block content %}
+<style>
+/* Premium SaaS Tables */
+.table-premium { border-collapse: separate; border-spacing: 0 12px; margin-top: -12px; width: 100%; }
+.table-premium thead th { border: none; font-weight: 800; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 1px; color: #a3aed1; padding: 10px 20px; }
+.table-premium tbody tr { background-color: #fff; box-shadow: 0 5px 15px rgba(0,0,0,0.03); transition: all 0.2s; border-radius: 16px; position: relative;}
+.table-premium tbody tr:hover { transform: translateY(-3px); box-shadow: 0 10px 25px rgba(67, 24, 255, 0.08); }
+.table-premium tbody td { border: none; padding: 18px 20px; vertical-align: middle; color: #2b3674; font-weight: 600; }
+.table-premium tbody td:first-child { border-top-left-radius: 16px; border-bottom-left-radius: 16px; border-left: 4px solid transparent; }
+.table-premium tbody td:last-child { border-top-right-radius: 16px; border-bottom-right-radius: 16px; text-align: right; }
+.table-premium tbody tr:hover td:first-child { border-left-color: #4318ff; }
+
+/* Menú 3 puntos */
+.btn-action-dots { border: none; background: #f4f7fe; color: #a3aed1; border-radius: 50%; width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s; }
+.btn-action-dots:hover, .btn-action-dots:focus { background: #4318ff; color: white; box-shadow: 0 4px 10px rgba(67, 24, 255, 0.3); }
+
+/* Gradientes para Estados de Pedidos */
+.badge-soft-paid { background: linear-gradient(135deg, #05cd99 0%, #039b73 100%); color: white; padding: 6px 12px; border-radius: 8px; font-weight: 700; }
+.badge-soft-pending { background: linear-gradient(135deg, #f6c000 0%, #d8a000 100%); color: #111; padding: 6px 12px; border-radius: 8px; font-weight: 800; }
+.badge-soft-cancelled { background: linear-gradient(135deg, #ee5d50 0%, #d63325 100%); color: white; padding: 6px 12px; border-radius: 8px; font-weight: 700; }
+.badge-soft-served { background: #e3f2fd; color: #2196f3; padding: 6px 12px; border-radius: 8px; font-weight: 800; border: 1px solid #bbdefb; }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold text-dark mb-1">Registro Maestro</h4>
+        <p class="text-muted small fw-medium">Audita todos los tickets y anulaciones del sistema.</p>
+    </div>
+</div>
+
+<div class="table-responsive hide-scrollbar" style="overflow-x: auto;">
+    <table class="table-premium">
+        <thead>
+            <tr>
+                <th>N° Ticket</th>
+                <th>Origen del Pedido</th>
+                <th>Mozo Asignado</th>
+                <th>Total Generado</th>
+                <th>Estado Final</th>
+                <th>Fecha de Apertura</th>
+                <th class="text-end">Opciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for o in orders %}
+            <tr>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <div class="rounded-circle shadow-sm me-3 d-flex align-items-center justify-content-center" style="width: 45px; height: 45px; background: #e3f2fd; color: #2196f3;">
+                            <i class="bi bi-receipt fs-5"></i>
+                        </div>
+                        <div>
+                            <span class="d-block fw-extrabold text-primary fs-6">{{ o.order_number }}</span>
+                        </div>
+                    </div>
+                </td>
+                <td class="fw-bold text-dark">
+                    {% if o.order_type == 'delivery' %}
+                        <span class="badge bg-danger rounded-pill px-3 py-2"><i class="bi bi-bicycle me-1"></i> Delivery</span>
+                        <div class="small text-muted mt-1">{{ o.customer_name }}</div>
+                    {% elif o.order_type == 'takeaway' %}
+                        <span class="badge bg-warning text-dark rounded-pill px-3 py-2"><i class="bi bi-bag-check-fill me-1"></i> Para Llevar</span>
+                        <div class="small text-muted mt-1">{{ o.customer_name }}</div>
+                    {% else %}
+                        <i class="bi bi-geo-alt-fill text-muted me-1"></i> Mesa {{ o.table_rel.number }}
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-person-badge text-primary me-2"></i> {{ o.waiter.full_name }}
+                    </div>
+                </td>
+                <td class="fs-5 fw-extrabold text-success">
+                    S/ {{ "%.2f"|format(o.total_amount) }}
+                </td>
+                <td>
+                    {% if o.status == 'pending' %}<span class="badge-soft-pending"><i class="bi bi-hourglass-split me-1"></i> Pendiente</span>
+                    {% elif o.status == 'served' %}<span class="badge-soft-served"><i class="bi bi-cart-check me-1"></i> Servido</span>
+                    {% elif o.status == 'paid' %}<span class="badge-soft-paid"><i class="bi bi-check-circle-fill me-1"></i> Pagado</span>
+                    {% elif o.status == 'cancelled' %}<span class="badge-soft-cancelled"><i class="bi bi-x-octagon-fill me-1"></i> Anulado</span>
+                    {% else %}<span class="badge-soft-served">{{ o.status|upper }}</span>{% endif %}
+                </td>
+                <td class="text-muted small fw-bold">
+                    <i class="bi bi-calendar-event me-1"></i> {{ o.created_at.strftime('%Y-%m-%d %H:%M') }}
+                </td>
+                <td>
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{{ url_for('orders.details', id=o.id) }}" class="btn-action-dots" title="Analizar Detalles" style="text-decoration: none;">
+                            <i class="bi bi-eye-fill"></i>
+                        </a>
+                        {% if o.status == 'paid' %}
+                        <a href="{{ url_for('cashier.ticket', order_id=o.id) }}" target="_blank" class="btn-action-dots text-white shadow-sm" style="background: #4318ff; text-decoration: none;" title="Imprimir Ticket">
+                            <i class="bi bi-printer-fill"></i>
+                        </a>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="7" class="text-center py-5">
+                    <div class="text-muted opacity-50 mb-3"><i class="bi bi-inbox fs-1"></i></div>
+                    <h5 class="fw-bold text-dark">Registro Vacío</h5>
+                    <p class="text-muted">No hay comandas registradas en el sistema aún.</p>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

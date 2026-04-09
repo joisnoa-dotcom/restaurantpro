@@ -1,0 +1,121 @@
+{% extends 'layout.html' %}
+
+{% block title %}Productos - RestaurantPro{% endblock %}
+{% block header_title %}Catálogo de Productos{% endblock %}
+
+{% block content %}
+<style>
+/* Premium SaaS Tables */
+.table-premium { border-collapse: separate; border-spacing: 0 12px; margin-top: -12px; width: 100%; }
+.table-premium thead th { border: none; font-weight: 800; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 1px; color: #a3aed1; padding: 10px 20px; }
+.table-premium tbody tr { background-color: #fff; box-shadow: 0 5px 15px rgba(0,0,0,0.03); transition: all 0.2s; border-radius: 16px; position: relative;}
+.table-premium tbody tr:hover { transform: translateY(-3px); box-shadow: 0 10px 25px rgba(67, 24, 255, 0.08); }
+.table-premium tbody td { border: none; padding: 18px 20px; vertical-align: middle; color: #2b3674; font-weight: 600; }
+.table-premium tbody td:first-child { border-top-left-radius: 16px; border-bottom-left-radius: 16px; border-left: 4px solid transparent; }
+.table-premium tbody td:last-child { border-top-right-radius: 16px; border-bottom-right-radius: 16px; text-align: right; }
+.table-premium tbody tr:hover td:first-child { border-left-color: #4318ff; }
+
+/* Menú 3 puntos */
+.btn-action-dots { border: none; background: #f4f7fe; color: #a3aed1; border-radius: 50%; width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s; }
+.btn-action-dots:hover, .btn-action-dots:focus { background: #4318ff; color: white; box-shadow: 0 4px 10px rgba(67, 24, 255, 0.3); }
+
+/* Gradientes para Badges */
+.badge-soft-success { background: linear-gradient(135deg, #05cd99 0%, #039b73 100%); color: white; padding: 6px 12px; border-radius: 8px; font-weight: 700; }
+.badge-soft-danger { background: linear-gradient(135deg, #ee5d50 0%, #d63325 100%); color: white; padding: 6px 12px; border-radius: 8px; font-weight: 700; }
+.badge-soft-info { background: #e0e5f2; color: #2b3674; padding: 6px 12px; border-radius: 8px; font-weight: 800; border: 1px solid #d5dcf0; }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold text-dark mb-1">Inventario General</h4>
+        <p class="text-muted small fw-medium">Gestiona tu oferta gastronómica de forma centralizada.</p>
+    </div>
+    <a href="{{ url_for('products.create') }}" class="btn btn-primary btn-lg fw-bold px-4 shadow-sm" style="border-radius: 14px; background: #4318ff; border: none;">
+        <i class="bi bi-plus-lg me-2"></i> Añadir Plata
+    </a>
+</div>
+
+<div class="table-responsive hide-scrollbar" style="overflow-x: auto;">
+    <table class="table-premium">
+        <thead>
+            <tr>
+                <th>Platillo / Bebida</th>
+                <th>Categoría</th>
+                <th>Precio</th>
+                <th>Inventario</th>
+                <th>Estado</th>
+                <th class="text-end">Opciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in products %}
+            <tr>
+                <td>
+                    <div class="d-flex align-items-center">
+                        {% if p.image_url %}
+                            <img src="{{ url_for('static', filename='uploads/products/' ~ p.image_url) }}" alt="{{ p.name }}" class="rounded shadow-sm me-3" style="width: 55px; height: 55px; object-fit: cover;">
+                        {% else %}
+                            <div class="rounded shadow-sm me-3 d-flex align-items-center justify-content-center" style="width: 55px; height: 55px; background: #f4f7fe; color: #a3aed1;">
+                                <i class="bi bi-camera fs-4"></i>
+                            </div>
+                        {% endif %}
+                        <div>
+                            <span class="d-block fw-bold text-dark fs-6">{{ p.name }}</span>
+                            <small class="text-muted fw-medium text-truncate d-inline-block" style="max-width: 200px;">{{ p.description or 'Sin descripción' }}</small>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <span class="badge" style="background-color: {{ p.category.color }}; border-radius: 8px; padding: 6px 12px; font-weight: 700;">{{ p.category.name }}</span>
+                </td>
+                <td class="fs-5 fw-extrabold text-dark">S/ {{ "%.2f"|format(p.price) }}</td>
+                <td>
+                    {% if p.track_stock %}
+                        <span class="badge-soft-info"><i class="bi bi-box-seam me-1"></i> {{ p.stock }}</span>
+                    {% else %}
+                        <span class="text-muted fw-bold opacity-50">Ilimitado</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if p.is_available %}
+                        <span class="badge-soft-success"><i class="bi bi-check-circle-fill me-1"></i> Activo</span>
+                    {% else %}
+                        <span class="badge-soft-danger"><i class="bi bi-x-circle-fill me-1"></i> Desactivado</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="dropdown text-end">
+                        <button class="btn-action-dots" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false">
+                            <i class="bi bi-three-dots-vertical"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="border-radius: 16px; border: 1px solid #f4f7fe;">
+                            <li>
+                                <a class="dropdown-item fw-bold py-2 text-dark" href="{{ url_for('products.edit', id=p.id) }}">
+                                    <i class="bi bi-pencil-square me-2 text-primary"></i> Editar Platos
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider opacity-10"></li>
+                            <li>
+                                <form action="{{ url_for('products.delete', id=p.id) }}" method="POST" class="m-0" onsubmit="return confirm('¿Eliminar permanentemente este producto de tu menú?');">
+                                    <button type="submit" class="dropdown-item fw-bold py-2 text-danger">
+                                        <i class="bi bi-trash-fill me-2"></i> Eliminar
+                                    </button>
+                                </form>
+                            </li>
+                        </ul>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" class="text-center py-5">
+                    <div class="text-muted opacity-50 mb-3"><i class="bi bi-inbox fs-1"></i></div>
+                    <h5 class="fw-bold text-dark">Catálogo Vacío</h5>
+                    <p class="text-muted">Aún no has agregado ningún producto a tu restaurante.</p>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

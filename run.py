@@ -1,0 +1,8 @@
+from app import create_app
+
+# Crear la instancia de la aplicación
+app = create_app()
+
+if __name__ == '__main__':
+    # Ejecutar en todas las interfaces de red locales (0.0.0.0)
+    app.run(host='0.0.0.0', port=5000, debug=True)

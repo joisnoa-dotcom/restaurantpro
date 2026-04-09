@@ -1,0 +1,11 @@
+Flask==3.0.2
+Flask-SQLAlchemy==3.1.1
+pg8000==1.30.5
+supabase==2.4.3
+cryptography==42.0.5
+Flask-Login==0.6.3
+Flask-Bcrypt==1.0.1
+Flask-WTF==1.2.1
+python-dotenv==1.0.1
+reportlab==4.1.0
+openpyxl==3.1.2

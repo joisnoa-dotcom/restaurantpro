@@ -1,0 +1,331 @@
+{% extends 'layout.html' %}
+
+{% block title %}Monitor de Mesas - RestaurantPro{% endblock %}
+{% block header_title %}Mesas en Vivo{% endblock %}
+
+{% block content %}
+<style>
+    /* Dashboard Styles Premium SaaS for Tables */
+    .table-card {
+        border-radius: 20px;
+        background: #ffffff;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 2px solid transparent;
+        overflow: visible;
+        position: relative;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.03);
+    }
+
+    .table-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+    }
+
+    .table-status-indicator {
+        position: absolute;
+        top: 18px;
+        right: 18px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+    }
+
+    .status-free {
+        border-color: #f4f7fe;
+    }
+
+    .status-free .table-status-indicator {
+        background-color: #05cd99;
+    }
+
+    .status-free .table-number {
+        color: #1b254b;
+    }
+
+    .status-occupied {
+        background: linear-gradient(to bottom right, #ffffff, #fffafb);
+        border-color: rgba(238, 93, 80, 0.4);
+        box-shadow: 0 10px 30px rgba(238, 93, 80, 0.12);
+    }
+
+    .status-occupied .table-status-indicator {
+        background-color: #ee5d50;
+        box-shadow: 0 0 0 0 rgba(238, 93, 80, 0.7);
+        animation: pulse-red 2s infinite;
+    }
+
+    .status-occupied .table-number {
+        color: #ee5d50;
+    }
+
+    .status-reserved {
+        border-color: #ffb300;
+    }
+
+    .status-reserved .table-status-indicator {
+        background-color: #ffb300;
+    }
+
+    .status-maintenance {
+        background: #f4f7fe;
+        border-color: #e2e8f0;
+    }
+
+    .status-maintenance .table-status-indicator {
+        background-color: #a3aed1;
+    }
+
+    .status-maintenance .table-number {
+        color: #a3aed1;
+    }
+
+    .table-number {
+        font-size: 3.5rem;
+        font-weight: 800;
+        line-height: 1;
+        margin-bottom: 5px;
+        transition: color 0.3s;
+    }
+
+    .table-label {
+        font-size: 0.85rem;
+        color: #a3aed1;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .table-meta {
+        background: #f4f7fe;
+        color: #8f9bba;
+        border-radius: 8px;
+        padding: 6px 12px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .btn-table {
+        border-radius: 12px;
+        padding: 12px 0;
+        font-weight: 800;
+        font-size: 0.95rem;
+        transition: all 0.2s;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .btn-primary-custom {
+        background-color: #4318ff;
+        color: #fff;
+        border: none;
+    }
+
+    .btn-primary-custom:hover {
+        background-color: #3311db;
+        color: #fff;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 15px rgba(67, 24, 255, 0.25);
+    }
+
+    @keyframes pulse-red {
+        0% {
+            transform: scale(0.95);
+            box-shadow: 0 0 0 0 rgba(238, 93, 80, 0.7);
+        }
+
+        70% {
+            transform: scale(1);
+            box-shadow: 0 0 0 10px rgba(238, 93, 80, 0);
+        }
+
+        100% {
+            transform: scale(0.95);
+            box-shadow: 0 0 0 0 rgba(238, 93, 80, 0);
+        }
+    }
+
+    .legend-pill {
+        padding: 8px 20px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 700;
+        background: #ffffff;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
+        border: 1px solid #f4f7fe;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: #1b254b;
+    }
+
+    .legend-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+    }
+</style>
+
+<div class="row mb-5">
+    <div class="col-12 d-flex gap-3 justify-content-center flex-wrap">
+        <div class="legend-pill">
+            <div class="legend-dot" style="background:#05cd99;"></div> Libre
+        </div>
+        <div class="legend-pill">
+            <div class="legend-dot" style="background:#ee5d50; animation: pulse-red 2s infinite;"></div> Ocupada
+        </div>
+        <div class="legend-pill">
+            <div class="legend-dot" style="background:#ffb300;"></div> Reservada
+        </div>
+        <div class="legend-pill">
+            <div class="legend-dot" style="background:#a3aed1;"></div> Mantenimiento
+        </div>
+    </div>
+</div>
+
+<!-- CONTROLES PARA PEDIDOS EXTERNOS -->
+<div class="row mb-4">
+    <div class="col-12 d-flex gap-3 justify-content-center">
+        <button type="button" class="btn btn-dark fw-bold px-4 py-3 shadow"
+            style="border-radius: 12px; font-size: 1rem;" data-bs-toggle="modal" data-bs-target="#takeawayModal">
+            <i class="bi bi-bag-check-fill me-2 text-warning"></i> Pedido Para Llevar
+        </button>
+        <button type="button" class="btn btn-primary-custom fw-bold px-4 py-3 shadow"
+            style="border-radius: 12px; font-size: 1rem; background: #ee5d50;" data-bs-toggle="modal"
+            data-bs-target="#deliveryModal">
+            <i class="bi bi-bicycle me-2"></i> Delivery a Domicilio
+        </button>
+    </div>
+</div>
+
+<!-- Modal Takeaway -->
+<div class="modal fade" id="takeawayModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow" style="border-radius: 20px;">
+            <form action="{{ url_for('orders.create_external') }}" method="POST">
+                <input type="hidden" name="order_type" value="takeaway">
+                <div class="modal-header border-0 bg-dark text-white" style="border-radius: 20px 20px 0 0;">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-bag-check-fill me-2 text-warning"></i>Nuevo Pedido
+                        Para Llevar</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted small">NOMBRE DEL CLIENTE (Para llamarlo)</label>
+                        <input type="text" name="customer_name" class="form-control form-control-lg fw-bold"
+                            placeholder="Ej. Juan Pérez" required>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="submit" class="btn btn-dark w-100 py-3 fw-bold shadow-sm"
+                        style="border-radius: 12px;">Crear Orden de Recojo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Delivery -->
+<div class="modal fade" id="deliveryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow" style="border-radius: 20px;">
+            <form action="{{ url_for('orders.create_external') }}" method="POST">
+                <input type="hidden" name="order_type" value="delivery">
+                <div class="modal-header border-0 text-white"
+                    style="background: #ee5d50; border-radius: 20px 20px 0 0;">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-bicycle me-2"></i>Nuevo Delivery a Domicilio</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-muted small">NOMBRE DEL CLIENTE</label>
+                            <input type="text" name="customer_name" class="form-control form-control-lg fw-bold"
+                                placeholder="Nombre" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-muted small">TELÉFONO O CELULAR</label>
+                            <input type="text" name="customer_phone" class="form-control form-control-lg fw-bold"
+                                placeholder="Ej. 987654321" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold text-muted small">DIRECCIÓN DE ENTREGA</label>
+                            <textarea name="delivery_address" class="form-control fw-bold" rows="2"
+                                placeholder="Ej. Av Costanera #123, Depto 401" required></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold text-muted small">COSTO DE ENVÍO / PASAJE (S/)</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white fw-bold text-danger border-end-0">S/</span>
+                                <input type="number" step="0.50" min="0" name="delivery_fee"
+                                    class="form-control form-control-lg border-start-0 fw-bold px-0 text-danger"
+                                    placeholder="0.00" value="0.00" required>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="submit" class="btn w-100 py-3 fw-bold text-white shadow-sm"
+                        style="background: #ee5d50; border-radius: 12px;">Despachar Delivery</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<h5 class="fw-bold text-muted text-uppercase mb-3 mt-4" style="letter-spacing: 1px; font-size: 0.9rem;">Servicio a Mesas
+    Tradicional</h5>
+<div class="row g-4">
+    {% for t in tables %}
+    {% set style_class = 'status-free' %}
+    {% set status_text = 'Mesa Libre' %}
+
+    {% if t.status == 'occupied' %}
+    {% set style_class = 'status-occupied' %}
+    {% set status_text = 'En Uso / Ocupada' %}
+    {% elif t.status == 'reserved' %}
+    {% set style_class = 'status-reserved' %}
+    {% set status_text = 'Reservada' %}
+    {% elif t.status == 'maintenance' %}
+    {% set style_class = 'status-maintenance' %}
+    {% set status_text = 'En Mantenimiento' %}
+    {% endif %}
+
+    <div class="col-6 col-md-4 col-lg-3">
+        <div class="table-card {{ style_class }}">
+            <div class="table-status-indicator"></div>
+            <div class="card-body p-4 text-center">
+                <div class="table-label mb-3">{{ status_text }}</div>
+                <div class="table-number">{{ t.number }}</div>
+
+                <div class="d-flex justify-content-center gap-2 mt-4 mb-4">
+                    <span class="table-meta"><i class="bi bi-people-fill text-muted"></i> {{ t.capacity }} pax</span>
+                </div>
+
+                {% if t.status == 'free' %}
+                <form action="{{ url_for('orders.create', table_id=t.id) }}" method="POST" class="m-0">
+                    <button type="submit" class="btn btn-primary-custom w-100 btn-table">Abrir Pedido</button>
+                </form>
+                {% elif t.status == 'occupied' %}
+                <a href="{{ url_for('orders.index') }}" class="btn btn-outline-danger w-100 btn-table"
+                    style="border-width: 2px;">Ver Pedido</a>
+                {% else %}
+                <button class="btn btn-light w-100 btn-table text-muted" style="background: #e2e8f0;" disabled>No
+                    Disponible</button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12 py-5 text-center">
+        <div class="p-5 bg-white rounded-4 shadow-sm" style="border: 2px dashed #e2e8f0;">
+            <i class="bi bi-grid-3x3-gap text-muted mb-3" style="font-size: 3rem;"></i>
+            <h4 class="fw-bold text-dark mb-1">No hay mesas dibujadas.</h4>
+            <p class="text-muted">Ve al Gestor de Mesas para crear la distribución de tu restaurante.</p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

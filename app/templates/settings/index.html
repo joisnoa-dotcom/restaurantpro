@@ -1,0 +1,71 @@
+{% extends 'layout.html' %}
+
+{% block title %}Ajustes - RestaurantPro{% endblock %}
+{% block header_title %}Configuración del Negocio{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-building me-2"></i>Datos de la Empresa</h5>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST" action="{{ url_for('settings.index') }}" enctype="multipart/form-data">
+                    <div class="row g-3">
+                        
+                        <div class="col-12 mb-3 pb-3 border-bottom">
+                            <label class="form-label fw-bold">Logo del Restaurante</label>
+                            <div class="d-flex align-items-center gap-3">
+                                {% if setting.logo_url %}
+                                    <div class="bg-light p-2 rounded border">
+                                        <img src="{{ url_for('static', filename=setting.logo_url) }}" alt="Logo" style="max-height: 70px; max-width: 150px; object-fit: contain;">
+                                    </div>
+                                {% else %}
+                                    <div class="bg-light border text-muted d-flex align-items-center justify-content-center rounded" style="width: 70px; height: 70px;">
+                                        <i class="bi bi-image fs-3"></i>
+                                    </div>
+                                {% endif %}
+                                
+                                <div class="flex-grow-1">
+                                    <input type="file" class="form-control" name="logo" accept="image/png, image/jpeg, image/jpg">
+                                    <small class="text-muted">Se recomiendan imágenes PNG transparentes. Tamaño máximo: 2MB.</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Nombre del Local</label>
+                            <input type="text" class="form-control" name="name" value="{{ setting.name }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Subtítulo (Rubro/Eslogan)</label>
+                            <input type="text" class="form-control" name="subtitle" value="{{ setting.subtitle }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">RUC</label>
+                            <input type="text" class="form-control" name="ruc" value="{{ setting.ruc }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Teléfono</label>
+                            <input type="text" class="form-control" name="phone" value="{{ setting.phone }}">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Dirección Completa</label>
+                            <input type="text" class="form-control" name="address" value="{{ setting.address }}">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Mensaje de Agradecimiento (Tickets)</label>
+                            <input type="text" class="form-control" name="thank_you_message" value="{{ setting.thank_you_message }}">
+                            <small class="text-muted">Aparecerá en la parte inferior de los tickets de venta.</small>
+                        </div>
+                        <div class="col-12 mt-4 text-end">
+                            <button type="submit" class="btn btn-primary px-4"><i class="bi bi-save me-2"></i>Guardar Cambios</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

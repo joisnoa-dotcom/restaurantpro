@@ -1,0 +1,429 @@
+{% extends 'layout.html' %}
+
+{% block title %}Dashboard - RestaurantPro{% endblock %}
+{% block header_title %}Centro de Control{% endblock %}
+
+{% block content %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+    /* Premium SaaS UI para Dashboard */
+    .db-container {
+        font-family: 'Inter', sans-serif;
+        color: #1b254b;
+    }
+
+    /* Grid de Tarjetas KPI */
+    .kpi-wrapper {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 24px;
+        margin-bottom: 24px;
+    }
+
+    .kpi-card {
+        background: #ffffff;
+        border-radius: 24px;
+        padding: 24px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        transition: all 0.3s ease;
+        border: 1px solid rgba(0, 0, 0, 0.01);
+    }
+
+    .kpi-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 30px rgba(67, 24, 255, 0.08);
+    }
+
+    .kpi-icon-box {
+        width: 48px;
+        height: 48px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+        margin-bottom: 16px;
+    }
+
+    .kpi-label {
+        color: #a3aed1;
+        font-size: 0.85rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 8px;
+    }
+
+    .kpi-amount {
+        font-size: 2.2rem;
+        font-weight: 900;
+        color: #1b254b;
+        margin-bottom: 8px;
+        line-height: 1;
+    }
+
+    .kpi-change {
+        font-size: 0.85rem;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .trend-pos {
+        color: #05cd99;
+        background: rgba(5, 205, 153, 0.1);
+        padding: 4px 10px;
+        border-radius: 20px;
+    }
+
+    .trend-neg {
+        color: #ee5d50;
+        background: rgba(238, 93, 80, 0.1);
+        padding: 4px 10px;
+        border-radius: 20px;
+    }
+
+    /* Gradientes de Íconos KPI */
+    .ic-revenue {
+        background: linear-gradient(135deg, #4318ff 0%, #868cff 100%);
+        color: white;
+    }
+
+    .ic-orders {
+        background: linear-gradient(135deg, #05cd99 0%, #039b73 100%);
+        color: white;
+    }
+
+    .ic-kitchen {
+        background: linear-gradient(135deg, #ffb300 0%, #d8a000 100%);
+        color: white;
+    }
+
+    .ic-tables {
+        background: linear-gradient(135deg, #ee5d50 0%, #d63325 100%);
+        color: white;
+    }
+
+    /* Grid de Charts */
+    .charts-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 24px;
+    }
+
+    @media (max-width: 992px) {
+        .charts-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .chart-card {
+        background: #ffffff;
+        border-radius: 24px;
+        padding: 28px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+        height: 100%;
+        border: 1px solid rgba(0, 0, 0, 0.01);
+    }
+
+    .chart-header-title {
+        font-weight: 900;
+        font-size: 1.3rem;
+        color: #1b254b;
+        margin: 0;
+    }
+
+    .chart-header-sub {
+        font-size: 0.85rem;
+        color: #a3aed1;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    /* Tabla Premium Adaptada para Dashboard */
+    .dash-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 10px;
+        margin-top: -10px;
+    }
+
+    .dash-table tbody tr {
+        background: #fdfdfe;
+        border-radius: 12px;
+        transition: all 0.2s;
+    }
+
+    .dash-table tbody tr:hover {
+        background: #ffffff;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        transform: translateX(4px);
+    }
+
+    .dash-table td {
+        padding: 12px 16px;
+        border: none;
+        vertical-align: middle;
+    }
+
+    .dash-table td:first-child {
+        border-top-left-radius: 12px;
+        border-bottom-left-radius: 12px;
+    }
+
+    .dash-table td:last-child {
+        border-top-right-radius: 12px;
+        border-bottom-right-radius: 12px;
+        text-align: right;
+    }
+
+    .badge-tag {
+        font-size: 0.7rem;
+        font-weight: 800;
+        padding: 6px 12px;
+        border-radius: 8px;
+        text-transform: uppercase;
+    }
+
+    .tag-paid {
+        background: #e6f9f0;
+        color: #039b73;
+    }
+
+    .tag-pending {
+        background: #fff8e1;
+        color: #d8a000;
+    }
+
+    .tag-cancelled {
+        background: #feebeb;
+        color: #d63325;
+    }
+
+    .btn-view-all {
+        display: block;
+        text-align: center;
+        background: #f4f7fe;
+        color: #4318ff;
+        font-weight: 800;
+        border-radius: 14px;
+        padding: 12px;
+        text-decoration: none;
+        transition: all 0.2s;
+        margin-top: 20px;
+    }
+
+    .btn-view-all:hover {
+        background: #4318ff;
+        color: white;
+    }
+</style>
+
+<div class="db-container">
+    <div class="mb-4">
+        <h2 class="fw-extrabold text-dark m-0" style="font-size: 2rem;">Resumen de Operatividad</h2>
+        <p class="text-muted fw-bold">Métricas y pulso financiero del restaurante al día de hoy.</p>
+    </div>
+
+    <!-- KPI Blocks -->
+    <div class="kpi-wrapper">
+        <div class="kpi-card">
+            <div>
+                <div class="kpi-icon-box ic-revenue shadow-sm"><i class="bi bi-wallet2"></i></div>
+                <div class="kpi-label">Ingresos de Hoy</div>
+                <div class="kpi-amount">S/ {{ "%.2f"|format(today_sales) }}</div>
+            </div>
+            <div class="kpi-change trend-pos"><i class="bi bi-graph-up-arrow"></i> +14.2% vs Ayer</div>
+        </div>
+
+        <div class="kpi-card">
+            <div>
+                <div class="kpi-icon-box ic-orders shadow-sm"><i class="bi bi-receipt-cutoff"></i></div>
+                <div class="kpi-label">Pedidos Hoy</div>
+                <div class="kpi-amount">{{ today_orders_count }}</div>
+            </div>
+            <div class="kpi-change trend-pos"><i class="bi bi-graph-up-arrow"></i> +8.5% tickets</div>
+        </div>
+
+        <div class="kpi-card">
+            <div>
+                <div class="kpi-icon-box ic-kitchen shadow-sm"><i class="bi bi-fire"></i></div>
+                <div class="kpi-label">Platos Pendientes</div>
+                <div class="kpi-amount">{{ pending_orders }}</div>
+            </div>
+            <div class="kpi-change trend-neg"><i class="bi bi-hourglass-split"></i> A la Espera de Pedidos</div>
+        </div>
+
+        <div class="kpi-card">
+            <div>
+                <div class="kpi-icon-box ic-tables shadow-sm"><i class="bi bi-grid-3x3-gap-fill"></i></div>
+                <div class="kpi-label">Mesas (Libres)</div>
+                <div class="kpi-amount">{{ free_tables }}</div>
+            </div>
+            <div class="kpi-change trend-pos"><i class="bi bi-door-open-fill"></i> Recepcionando</div>
+        </div>
+    </div>
+
+    <div class="charts-grid">
+        <!-- Gráfica Principal -->
+        <div class="chart-card">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h5 class="chart-header-title">Tráfico Financiero</h5>
+                    <p class="chart-header-sub">Comportamiento del consumo en los últimos 7 días</p>
+                </div>
+                <div class="badge bg-light text-primary fw-bold px-3 py-2 border shadow-sm rounded-pill">Última Semana
+                </div>
+            </div>
+            <div style="position: relative; height: 350px; width: 100%;">
+                <canvas id="salesChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Pedidos en Tiempo Real -->
+        <div class="chart-card d-flex flex-column">
+            <div>
+                <h5 class="chart-header-title mb-1">Radar en Vivo</h5>
+                <p class="chart-header-sub mb-4">Últimas 5 comandas ingresadas</p>
+            </div>
+
+            <div style="flex-grow: 1;">
+                <table class="dash-table">
+                    <tbody>
+                        {% for ro in recent_orders %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="rounded-circle d-flex align-items-center justify-content-center me-3 shadow-sm"
+                                        style="width: 40px; height: 40px; background: #e3f2fd; color: #4318ff;">
+                                        <i class="bi bi-hash fw-bold fs-6"></i>
+                                    </div>
+                                    <div>
+                                        <span class="d-block fw-extrabold text-dark" style="font-size: 0.95rem;">{{
+                                            ro.order_number }}</span>
+                                        <small class="text-muted fw-bold">
+                                            {% if ro.order_type == 'delivery' %}
+                                            Delivery
+                                            {% elif ro.order_type == 'takeaway' %}
+                                            Para Llevar
+                                            {% else %}
+                                            Mesa {{ ro.table_rel.number }}
+                                            {% endif %}
+                                            • <i class="bi bi-clock-history"></i> {{ ro.created_at.strftime('%H:%M') }}
+                                        </small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="d-block fw-extrabold text-dark mb-1" style="font-size: 0.95rem;">S/ {{
+                                    "%.2f"|format(ro.total_amount) }}</div>
+                                {% if ro.status == 'pending' %}
+                                <span class="badge-tag tag-pending">Pendiente</span>
+                                {% elif ro.status == 'paid' %}
+                                <span class="badge-tag tag-paid">Pagado</span>
+                                {% elif ro.status == 'cancelled' %}
+                                <span class="badge-tag tag-cancelled">Anulado</span>
+                                {% else %}
+                                <span class="badge-tag" style="background:#e0e5f2; color:#2b3674;">{{ ro.status|upper
+                                    }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="2" class="text-center py-5">
+                                <div class="text-muted opacity-50 mb-2"><i class="bi bi-cup-hot fs-2"></i></div>
+                                <span class="fw-bold text-dark">Servicio Vacio</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <a href="{{ url_for('orders.index') }}" class="btn-view-all shadow-sm">
+                <i class="bi bi-eye-fill me-1"></i> Abrir Historial Analítico
+            </a>
+        </div>
+    </div>
+</div>
+<div id="chart-data" data-labels='{{ chart_labels | tojson }}' data-values='{{ chart_data | tojson }}'></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const dataEl = document.getElementById('chart-data');
+        const chartLabels = JSON.parse(dataEl.dataset.labels);
+        const chartData = JSON.parse(dataEl.dataset.values);
+
+        const ctx = document.getElementById('salesChart').getContext('2d');
+
+        let gradientLine = ctx.createLinearGradient(0, 0, 0, 350);
+        gradientLine.addColorStop(0, 'rgba(67, 24, 255, 0.4)');
+        gradientLine.addColorStop(1, 'rgba(67, 24, 255, 0.0)');
+
+        const salesChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: chartLabels,
+                datasets: [{
+                    label: 'Ingresos Netos (S/)',
+                    data: chartData,
+                    borderColor: '#4318ff', // Azul eléctrico premium
+                    backgroundColor: gradientLine,
+                    borderWidth: 4,
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderColor: '#4318ff',
+                    pointBorderWidth: 3,
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
+                    fill: true,
+                    tension: 0.4 // Curva elegante
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#1b254b',
+                        padding: 14,
+                        titleFont: { family: 'Inter', size: 14 },
+                        bodyFont: { family: 'Inter', size: 16, weight: 'bold' },
+                        displayColors: false,
+                        cornerRadius: 12,
+                        callbacks: {
+                            label: function (context) { return 'S/ ' + context.parsed.y.toFixed(2); }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#a3aed1', font: { family: 'Inter', size: 12, weight: '700' } },
+                        border: { display: false }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: { borderDash: [6, 6], color: '#f4f7fe' },
+                        ticks: { color: '#a3aed1', font: { family: 'Inter', size: 12, weight: '700' } },
+                        border: { display: false }
+                    }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index',
+                },
+            }
+        });
+    });
+</script>
+{% endblock %}

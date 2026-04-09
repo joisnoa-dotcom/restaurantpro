@@ -1,0 +1,154 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* Base Styles */
+body {
+    font-family: 'Inter', sans-serif !important;
+    background-color: #f7f9fc !important; /* Soft, premium light background */
+}
+
+/* Typography Enhancements */
+h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+    letter-spacing: -0.02em;
+}
+
+/* Sidebar Custom Theme */
+#sidebarMenu {
+    background-color: #111827 !important; /* Modern dark grey/blue */
+    border-right: 1px solid rgba(255,255,255,0.05);
+}
+
+.sidebar-link {
+    color: #9ca3af !important; /* Subdued text color */
+    text-decoration: none;
+    padding: 12px 18px;
+    display: block;
+    border-radius: 8px;
+    font-weight: 500;
+    font-size: 0.95rem;
+    transition: all 0.25s ease-in-out;
+    margin-bottom: 4px;
+    position: relative;
+    overflow: hidden;
+}
+
+.sidebar-link i {
+    font-size: 1.15rem;
+    transition: transform 0.25s ease;
+    vertical-align: middle;
+}
+
+/* Sidebar Link Hover Effect */
+.sidebar-link:hover {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    color: #f3f4f6 !important;
+    transform: translateX(4px);
+}
+
+.sidebar-link:hover i {
+    transform: scale(1.15);
+    color: #60a5fa; /* Subtle blue tint to icons on hover */
+}
+
+/* Dashboard Active Highlight */
+.sidebar-link.active {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.3);
+}
+
+.sidebar-link.active i {
+    color: #ffffff;
+}
+
+/* Highlighted semantic links without breaking harmony */
+.sidebar-link.link-highlight-kitchen:hover i { color: #f59e0b; }
+.sidebar-link.link-highlight-cashier:hover i { color: #10b981; }
+
+.sidebar-link.dropdown-toggle::after {
+    float: right;
+    margin-top: 8px;
+    transition: transform 0.2s ease;
+}
+
+/* Refined Dividers */
+.sidebar-link hr, hr.text-white {
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    opacity: 1;
+}
+
+/* Main content spacing adjustments */
+.main-content { 
+    min-width: 0; 
+    background-color: transparent;
+}
+
+/* Notification Dots */
+.notif-dot { 
+    width: 10px; height: 10px; padding: 0 !important; 
+    box-shadow: 0 0 0 2px #111827; /* Fake border to cut into bell icon */
+}
+
+/* Fix: Prevenir que dropdowns se corten en tablas y tarjetas */
+.table-responsive {
+    overflow: visible;
+}
+
+@media (max-width: 991.98px) {
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+.card, .table-card {
+    overflow: visible !important;
+}
+
+.dropdown-menu {
+    z-index: 2000 !important;
+}
+
+/* Fix: Asegurar que la fila con el menú abierto esté sobre las demás */
+.table-premium tbody tr {
+    position: relative;
+    z-index: 1;
+}
+
+/* Elevación moderada al pasar el mouse */
+.table-premium tbody tr:hover {
+    z-index: 5;
+}
+
+/* 
+   REGLA DE ORO: La fila con el dropdown abierto debe tener 
+   prioridad absoluta sobre cualquier otra fila, incluso sobre el hover.
+*/
+.table-premium tbody tr:has(.show),
+.table-premium tbody tr.dropdown-open {
+    z-index: 9999 !important;
+}
+
+/* Evitar que el transform del hover cree un nuevo contexto de apilamiento que rompa el z-index */
+.table-premium tbody tr:has(.show) {
+    transform: none !important;
+}
+
+.dropdown-menu {
+    z-index: 99999 !important; /* El menú por encima de TODO */
+    margin-top: 5px !important;
+}
+
+.btn-action-dots {
+    background: transparent;
+    border: none;
+    padding: 8px;
+    border-radius: 8px;
+    color: #a3aed1;
+    transition: all 0.2s;
+}
+
+.btn-action-dots:hover {
+    background: #f4f7fe;
+    color: #4318ff;
+}

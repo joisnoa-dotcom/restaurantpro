@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ticket - {{ order.order_number }}</title>
+    <style>
+        body { font-family: 'Courier New', Courier, monospace; font-size: 12px; color: #000; margin: 0; padding: 10px; width: 300px; }
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .text-left { text-align: left; }
+        .fw-bold { font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin-top: 5px; margin-bottom: 5px; }
+        th, td { padding: 4px 0; }
+        .border-bottom { border-bottom: 1px dashed #000; }
+        .border-top { border-top: 1px dashed #000; }
+        .mb-1 { margin-bottom: 5px; }
+        .mt-1 { margin-top: 5px; }
+        .no-print { text-align: center; margin: 20px 0; font-family: Arial, sans-serif; }
+        .btn-back { display: inline-block; padding: 15px 30px; background: #4318ff; color: white; text-decoration: none; font-weight: bold; border-radius: 12px; font-size: 16px; box-shadow: 0 4px 15px rgba(67,24,255,0.3); transition: all 0.2s;}
+        .btn-back:hover { background: #3311db; transform: translateY(-2px);}
+        @media print { @page { margin: 0; } body { margin: 0; padding: 10px; width: 100%; } .no-print { display: none !important; } }
+    </style>
+</head>
+<body>
+    <div class="no-print">
+        <a href="{{ url_for('cashier.pos') }}" class="btn-back">⬅ Volver a Caja / Escanear Siguiente</a>
+    </div>
+
+    <div class="text-center mb-1">
+        <h2 style="margin: 0; font-size: 18px;">{{ restaurant.name|upper if restaurant else 'MI RESTAURANTE' }}</h2>
+        <div>{{ restaurant.subtitle if restaurant else 'Sistema POS' }}</div>
+        <div>{{ restaurant.address if restaurant else '' }}</div>
+        <div>{{ 'RUC: ' ~ restaurant.ruc if restaurant and restaurant.ruc else '' }}</div>
+        {% if restaurant and restaurant.phone %}<div>Tel: {{ restaurant.phone }}</div>{% endif %}
+    </div>
+    
+    <div class="border-top border-bottom mt-1 mb-1 py-1 text-center">
+        {% if invoice %}
+            <div class="fw-bold">{{ invoice.invoice_type | upper }} ELECTRÓNICA</div>
+            <div>{{ invoice.document_number }}</div>
+        {% else %}
+            <div class="fw-bold">TICKET DE VENTA</div>
+            <div>{{ order.order_number }}</div>
+        {% endif %}
+    </div>
+
+    <div class="mb-1">
+        <div>Fecha: {{ order.created_at.strftime('%d/%m/%Y %H:%M') }}</div>
+        <div>Cajero: {{ current_user.username }}</div>
+        <div>Mesa: {{ order.table_rel.number }}</div>
+        {% if invoice %}
+        <div>Cliente: {{ invoice.customer_name }}</div>
+        <div>Doc: {{ invoice.customer_document }}</div>
+        {% endif %}
+    </div>
+
+    <div class="border-top border-bottom mt-1">
+        <table>
+            <thead>
+                <tr class="text-left">
+                    <th style="width: 15%;">Cant</th>
+                    <th style="width: 55%;">Descripción</th>
+                    <th class="text-right" style="width: 30%;">Importe</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in order.items %}
+                {% if item.status != 'cancelled' %}
+                <tr>
+                    <td>{{ item.quantity }}</td>
+                    <td>{{ item.product.name }}</td>
+                    <td class="text-right">S/ {{ "%.2f"|format(item.subtotal) }}</td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mt-1 pt-1">
+        {% if invoice %}
+        <table style="margin:0;">
+            <tr><td>SUBTOTAL:</td><td class="text-right">S/ {{ "%.2f"|format(invoice.subtotal) }}</td></tr>
+            <tr><td>IGV (18%):</td><td class="text-right">S/ {{ "%.2f"|format(invoice.tax_amount) }}</td></tr>
+        </table>
+        {% endif %}
+        <table style="margin:0;">
+            <tr class="fw-bold" style="font-size: 14px;">
+                <td>TOTAL:</td>
+                <td class="text-right">S/ {{ "%.2f"|format(order.total_amount) }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="border-top mt-1 pt-1 mb-1 text-center">
+        {% if payment %}
+        <div>Método de pago: {{ payment.payment_method | upper }}</div>
+        {% endif %}
+    </div>
+
+    <div class="text-center mt-1">
+        <div class="fw-bold">{{ restaurant.thank_you_message if restaurant else '¡GRACIAS POR SU PREFERENCIA!' }}</div>
+        <div style="font-size: 10px; margin-top: 5px;">Sistema de Gestión: {{ restaurant.name if restaurant else 'RestaurantPro' }}</div>
+    </div>
+
+    <script>
+        window.onload = function() { window.print(); }
+    </script>
+</body>
+</html>

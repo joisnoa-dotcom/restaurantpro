@@ -1,0 +1,375 @@
+{% extends 'layout.html' %}
+
+{% block title %}Detalle del Pedido - RestaurantPro{% endblock %}
+{% block header_title %}Comanda Activa: #{{ order.order_number }} - Mesa {{ order.table_rel.number }}{% endblock %}
+
+{% block content %}
+<style>
+/* Estilos SaaS Premium para Detalles de Pedido y Pestañas */
+.receipt-card {
+    border-radius: 16px;
+    background: #ffffff;
+    border: none;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+    position: relative;
+    border-top: 6px solid #1b254b;
+}
+
+.receipt-item {
+    border-left: 3px solid transparent;
+    transition: all 0.2s;
+    background: #ffffff;
+    margin-bottom: 8px;
+    border-radius: 8px;
+    border: 1px solid #f4f7fe;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+.receipt-item:hover {
+    border-left-color: #4318ff;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+}
+
+.product-card {
+    border-radius: 16px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+    border: 2px solid transparent;
+    overflow: hidden;
+    position: relative;
+    background: white;
+}
+.product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 30px rgba(67, 24, 255, 0.12);
+    border-color: rgba(67, 24, 255, 0.3);
+}
+.product-img-wrapper {
+    height: 140px;
+    overflow: hidden;
+    background: #f8f9fa;
+    position: relative;
+}
+.product-img-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s;
+}
+.product-card:hover .product-img-wrapper img {
+    transform: scale(1.08);
+}
+.price-pill {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(5px);
+    color: #4318ff;
+    font-weight: 800;
+    padding: 4px 12px;
+    border-radius: 20px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    font-size: 0.85rem;
+    z-index: 2;
+}
+
+/* Scrollable Category Tabs */
+.category-tabs-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    border-bottom: 2px solid #f4f7fe;
+    padding-bottom: 10px;
+}
+.category-tabs-wrapper::-webkit-scrollbar {
+    display: none;
+}
+.nav-pills .nav-link {
+    color: #a3aed1;
+    font-weight: 700;
+    border-radius: 20px;
+    padding: 8px 24px;
+    margin-right: 10px;
+    transition: all 0.2s;
+    background: transparent;
+    border: 1px solid #e2e8f0;
+    white-space: nowrap;
+}
+.nav-pills .nav-link.active {
+    background: #1b254b;
+    color: #ffffff;
+    border-color: #1b254b;
+    box-shadow: 0 5px 15px rgba(27, 37, 75, 0.3);
+}
+.nav-pills .nav-link:hover:not(.active) {
+    background: #f4f7fe;
+    color: #4318ff;
+}
+</style>
+
+{% if order.status == 'cancelled' %}
+<div class="alert alert-danger shadow-sm border-0 mb-4 rounded-4" role="alert">
+    <div class="d-flex align-items-center mb-2">
+        <i class="bi bi-x-octagon-fill fs-3 me-3 text-danger"></i>
+        <h4 class="fw-bold mb-0">Comanda Anulada y Cerrada</h4>
+    </div>
+    <p class="mb-0 fs-6">Este pedido fue cancelado y no admite modificaciones. Revisa el registro de auditoría a continuación.</p>
+    {% if cancel_log %}
+        <hr class="border-danger opacity-25 my-3">
+        <div class="bg-white bg-opacity-50 p-3 rounded-3">
+            <p class="mb-1"><i class="bi bi-card-text me-2 text-danger"></i><strong>Motivo de anulación:</strong> <span class="fw-medium">{{ cancel_log.details.split('Motivo: ')[-1] if 'Motivo: ' in cancel_log.details else cancel_log.details }}</span></p>
+            <p class="mb-0 small text-danger"><i class="bi bi-clock-history me-1"></i>Liquidado en sistema el {{ cancel_log.created_at.strftime('%d/%m/%Y a las %H:%M') }}</p>
+        </div>
+    {% endif %}
+</div>
+{% endif %}
+<div class="row g-4">
+    <!-- PANEL IZQUIERDO: MENÚ CON PESTAÑAS (Área de Selección Principal) -->
+    {% if order.status != 'cancelled' %}
+    <div class="col-lg-8 order-2 order-lg-1">
+        <div class="category-tabs-wrapper mb-4 bg-white p-2 rounded-4 shadow-sm sticky-top" style="top: 10px; z-index: 1020;">
+            <ul class="nav nav-pills flex-nowrap" id="pills-tab" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tab-all" type="button" role="tab"><i class="bi bi-grid-fill me-1 opacity-75"></i>Todos</button>
+                </li>
+                {% for c in categories %}
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-cat{{ c.id }}" type="button" role="tab">{{ c.name }}</button>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        
+        <div class="tab-content" id="pills-tabContent">
+            <!-- PESTAÑA: TODOS -->
+            <div class="tab-pane fade show active" id="tab-all" role="tabpanel">
+                <div class="row g-3">
+                    {% for p in products %}
+                    <div class="col-6 col-md-4 col-xl-3">
+                        <div class="product-card h-100" data-bs-toggle="modal" data-bs-target="#addProductModal{{ p.id }}" style="cursor: pointer;">
+                            <div class="price-pill">S/ {{ "%.2f"|format(p.price) }}</div>
+                            <div class="product-img-wrapper d-flex align-items-center justify-content-center">
+                                {% if p.image_url %}
+                                    <img src="{{ url_for('static', filename='uploads/products/' ~ p.image_url) }}" alt="{{ p.name }}">
+                                {% else %}
+                                    <div class="text-center">
+                                        <i class="bi bi-egg-fried text-primary opacity-25" style="font-size:3rem;"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="card-body p-2 text-center">
+                                <h6 class="fw-extrabold mb-0 text-dark text-truncate" style="font-size: 0.85rem;" title="{{ p.name }}">{{ p.name }}</h6>
+                                {% if p.track_stock and p.stock < 5 %}
+                                    <span class="badge bg-danger bg-opacity-10 text-danger mt-1 p-1" style="font-size: 0.6rem;">Solo {{ p.stock }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <!-- PESTAÑAS: CATEGORÍAS -->
+            {% for c in categories %}
+            <div class="tab-pane fade" id="tab-cat{{ c.id }}" role="tabpanel">
+                <div class="row g-3">
+                    {% set has_products = namespace(value=false) %}
+                    {% for p in products %}
+                        {% if p.category_id == c.id %}
+                            {% set has_products.value = true %}
+                            <div class="col-6 col-md-4 col-xl-3">
+                                <div class="product-card h-100" data-bs-toggle="modal" data-bs-target="#addProductModal{{ p.id }}" style="cursor: pointer;">
+                                    <div class="price-pill">S/ {{ "%.2f"|format(p.price) }}</div>
+                                    <div class="product-img-wrapper d-flex align-items-center justify-content-center">
+                                        {% if p.image_url %}
+                                            <img src="{{ url_for('static', filename='uploads/products/' ~ p.image_url) }}" alt="{{ p.name }}">
+                                        {% else %}
+                                            <div class="text-center">
+                                                <i class="bi bi-egg-fried text-primary opacity-25" style="font-size:3rem;"></i>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="card-body p-2 text-center">
+                                        <h6 class="fw-extrabold mb-0 text-dark text-truncate" style="font-size: 0.85rem;">{{ p.name }}</h6>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if not has_products.value %}
+                    <div class="col-12 text-center py-5">
+                        <i class="bi bi-folder-x fs-1 text-muted opacity-50 mb-3 d-block"></i>
+                        <p class="text-muted fw-bold">Sin platos en esta categoría</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div> <!-- Cierre de col-lg-8 -->
+    {% endif %}
+
+    <!-- PANEL DERECHO: TICKET / CUENTA (Sidebar Informativa) -->
+    <div class="{% if order.status == 'cancelled' %}col-12 col-md-8 col-lg-6 mx-auto{% else %}col-lg-4 order-1 order-lg-2{% endif %}">
+        <div class="sticky-top" style="top: 10px; z-index: 1000;">
+            <div class="receipt-card d-flex flex-column" style="height: calc(100vh - 100px);">
+                <div class="card-header bg-transparent border-0 px-4 pt-4 pb-0">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <h4 class="mb-1 fw-bold text-dark"><i class="bi bi-receipt-cutoff me-2 text-primary"></i>Cuenta</h4>
+                            <span class="text-muted small fw-bold">
+                                {% if order.order_type == 'delivery' %}
+                                    <i class="bi bi-bicycle"></i> {{ order.customer_name }} • {{ order.order_number }}
+                                {% elif order.order_type == 'takeaway' %}
+                                    <i class="bi bi-bag-check-fill"></i> {{ order.customer_name }} • {{ order.order_number }}
+                                {% else %}
+                                    Mesa {{ order.table_rel.number }} • {{ order.order_number }}
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    {% if order.status != 'cancelled' %}
+                    <div class="d-flex gap-2 mb-2">
+                        <a href="{{ url_for('orders.comanda', order_id=order.id) }}" target="_blank" class="btn btn-light flex-grow-1 fw-bold" style="border-radius:12px; font-size:0.8rem;"><i class="bi bi-printer me-1"></i> Ticket</a>
+                        <button type="button" class="btn btn-outline-danger btn-sm fw-bold" style="border-radius:11px;" data-bs-toggle="modal" data-bs-target="#cancelOrderModal"><i class="bi bi-slash-circle"></i></button>
+                    </div>
+                    {% endif %}
+                    <hr style="border-style: dashed; opacity: 0.15;" class="my-2">
+                </div>
+
+                <!-- LISTA DE PRODUCTOS EN CUENTA (Con Scroll Independiente) -->
+                <div class="card-body px-3 pt-0 overflow-auto flex-grow-1">
+                    <ul class="list-unstyled mb-0">
+                        {% for item in order.items %}
+                        <li class="receipt-item p-2 px-3 mb-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div style="max-width: 70%;">
+                                    <h6 class="mb-0 fw-bold text-dark" style="font-size: 0.85rem;">{{ item.quantity }}x {{ item.product.name }}</h6>
+                                    {% if item.notes %}
+                                        <div class="text-warning fw-bold small" style="font-size: 0.65rem;"><i class="bi bi-chat-left-text-fill me-1"></i>{{ item.notes }}</div>
+                                    {% endif %}
+                                    <div class="mt-1">
+                                        {% if item.status == 'pending' %}
+                                            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger" style="font-size: 0.6rem;">Cola</span>
+                                        {% elif item.status == 'preparing' %}
+                                            <span class="badge bg-warning bg-opacity-10 text-warning border border-warning" style="font-size: 0.6rem;">Fuego</span>
+                                        {% elif item.status == 'ready' %}
+                                            <span class="badge bg-success bg-opacity-10 text-success border border-success" style="font-size: 0.6rem;">¡Listo!</span>
+                                        {% elif item.status == 'cancelled' %}
+                                            <span class="badge bg-dark" style="font-size: 0.6rem;">X</span>
+                                        {% endif %}
+                                        
+                                        {% if item.status in ['pending', 'preparing'] and order.status != 'paid' %}
+                                        <form action="{{ url_for('orders.remove_item', item_id=item.id) }}" method="POST" class="d-inline ms-1" onsubmit="return confirm('¿Quitar del pedido?');">
+                                            <button type="submit" class="p-0 border-0 bg-transparent text-danger"><i class="bi bi-x-circle-fill"></i></button>
+                                        </form>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <span class="fw-extrabold text-dark" style="font-size: 0.95rem;">S/ {{ "%.2f"|format(item.subtotal) }}</span>
+                            </div>
+                        </li>
+                        {% else %}
+                        <li class="p-4 text-center text-muted">
+                            <i class="bi bi-cart-x fs-2 mb-2 d-block opacity-25"></i>
+                            <p class="small mb-0">Sin platos.</p>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                {% if order.order_type == 'delivery' and order.delivery_fee > 0 %}
+                <div class="px-4 py-2 bg-light d-flex justify-content-between align-items-center" style="border-top: 1px dashed #e2e8f0; font-size: 0.85rem;">
+                    <span class="fw-bold text-muted"><i class="bi bi-bicycle"></i> Envío / Delivery</span>
+                    <span class="fw-bold text-dark">S/ {{ "%.2f"|format(order.delivery_fee) }}</span>
+                </div>
+                {% endif %}
+
+                <!-- FOOTER TOTAL (Siempre visible al final del Sidebar) -->
+                <div class="card-footer bg-light border-0 p-4 mt-auto" style="border-radius: 0 0 16px 16px; border-top: 2px solid #fff !important;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="fw-bold text-muted">Total</span>
+                        <h2 class="mb-0 fw-extrabold text-success" style="letter-spacing:-1px;">S/ {{ "%.2f"|format(order.total_amount) }}</h2>
+                    </div>
+                    {% if order.status != 'paid' and order.total_amount > 0 %}
+                    <a href="{{ url_for('cashier.checkout', order_id=order.id) }}" class="btn btn-success w-100 fw-bold mt-3 py-2 shadow-sm" style="border-radius:12px; font-size:1.1rem; background:#05cd99; border:none;">
+                        Cobrar Comanda <i class="bi bi-arrow-right-circle ms-1"></i>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div> <!-- Cierre de row g-4 principal -->
+
+<!-- MODAL ANULAR -->
+<div class="modal fade" id="cancelOrderModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius:20px; border:none; box-shadow:0 20px 40px rgba(0,0,0,0.2);">
+            <form action="{{ url_for('orders.cancel', id=order.id) }}" method="POST">
+                <div class="modal-header border-0 pb-0 mt-2">
+                    <h4 class="modal-title fw-bold text-danger"><i class="bi bi-exclamation-triangle-fill me-2"></i>Anular Pedido</h4>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-start px-4">
+                    <p class="mb-4 text-muted">¿Estás 100% seguro de anular los platos y limpiar esta cuenta?</p>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark text-uppercase small">Justificación Obligatoria</label>
+                        <textarea name="cancel_reason" class="form-control" rows="2" placeholder="Ej: Cliente se retiró..." required style="border-radius:12px; background:#f4f7fe; border:none;"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4">
+                    <button type="button" class="btn btn-light fw-bold px-4" data-bs-dismiss="modal" style="border-radius:12px;">Cerrar</button>
+                    <button type="submit" class="btn btn-danger fw-bold px-4" style="border-radius:12px;">Destruir Cuenta</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODALES DE PRODUCTOS -->
+{% for p in products %}
+<div class="modal fade" id="addProductModal{{ p.id }}" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 20px; border:none; overflow:hidden;">
+            <div class="modal-header border-0 bg-light pb-3">
+                <div class="d-flex align-items-center">
+                    {% if p.image_url %}
+                    <img src="{{ url_for('static', filename='uploads/products/' ~ p.image_url) }}" style="width:40px; height:40px; border-radius:10px; object-fit:cover;" class="me-3 shadow-sm">
+                    {% endif %}
+                    <h5 class="modal-title fw-bold text-dark">{{ p.name }}</h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('orders.add_item', id=order.id) }}" method="POST">
+                <div class="modal-body px-4 py-4">
+                    <input type="hidden" name="product_id" value="{{ p.id }}">
+                    <div class="row align-items-center mb-4">
+                        <div class="col-6">
+                            <label class="form-label fw-bold text-muted small text-uppercase">Cantidad Platos</label>
+                            <input type="number" class="form-control form-control-lg text-center fw-bold" name="quantity" value="1" min="1" required style="border-radius:12px; background:#f4f7fe; border:none; font-size:1.5rem;">
+                        </div>
+                        <div class="col-6 text-end">
+                            <label class="form-label fw-bold text-muted small text-uppercase d-block">Precio Unitario</label>
+                            <span class="fs-3 fw-bold text-primary">S/ {{ "%.2f"|format(p.price) }}</span>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label fw-bold text-dark small"><i class="bi bi-chat-left-text me-1"></i> Petición Especial a Cocina (Opcional)</label>
+                        <input type="text" class="form-control" name="notes" placeholder="Ej: Sin cebolla, bien cocido..." style="border-radius:12px; background:#fbfcfe; border:1px solid #e2e8f0; padding:12px;">
+                    </div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4">
+                    <button type="submit" class="btn btn-primary w-100 fw-bold py-3" style="border-radius:14px; background:#4318ff; border:none; font-size:1.1rem; box-shadow:0 10px 20px rgba(67,24,255,0.2);">
+                        <i class="bi bi-plus-circle-fill me-1"></i> Despachar a la Cuenta
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}

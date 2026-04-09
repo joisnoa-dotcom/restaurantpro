@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}RestaurantPro{% endblock %}</title>
+    
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#343a40">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+</head>
+<body class="bg-light">
+
+    <nav class="navbar navbar-dark bg-dark d-md-none px-3 shadow-sm d-flex justify-content-between">
+        <a class="navbar-brand fw-bold d-flex align-items-center" href="{% if current_user.role == 'admin' %}{{ url_for('dashboard.index') }}{% elif current_user.role == 'chef' %}{{ url_for('orders.kitchen') }}{% elif current_user.role == 'cashier' %}{{ url_for('cashier.pos') }}{% else %}{{ url_for('tables.monitor') }}{% endif %}">
+            
+            {% if restaurant and restaurant.logo_url %}
+                <img src="{{ url_for('static', filename=restaurant.logo_url) }}" alt="Logo" style="height: 30px; margin-right: 8px; border-radius: 4px; background: white; padding: 2px; object-fit: contain;">
+            {% else %}
+                <i class="bi bi-shop me-2"></i>
+            {% endif %}
+            
+            <span class="text-truncate" style="max-width: 150px;">{{ restaurant.name if restaurant else 'RestPro' }}</span>
+        </a>
+        
+        <div class="d-flex align-items-center">
+            <div class="dropdown me-3">
+                <a href="#" class="text-white text-decoration-none dropdown-toggle" id="dropdownNotifMobile" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false">
+                    <div class="position-relative">
+                        <i class="bi bi-bell-fill fs-5"></i>
+                        {% if unread_count > 0 %}
+                        <span class="position-absolute top-0 start-100 translate-middle notif-dot bg-danger border border-dark rounded-circle"></span>
+                        {% endif %}
+                    </div>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end text-small shadow" aria-labelledby="dropdownNotifMobile" style="width: 250px; z-index: 9999;">
+                    {% if unread_count > 0 %}
+                        {% for n in unread_notifications %}
+                        <li>
+                            <div class="dropdown-item py-2 text-wrap" style="cursor: default;">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <small class="text-warning fw-bold"><i class="bi bi-fire me-1"></i>Sistema</small>
+                                    <small class="text-muted" style="font-size: 0.7rem;">{{ n.time }}</small>
+                                </div>
+                                <span style="font-size: 0.85rem; line-height: 1.2;">{{ n.message }}</span>
+                            </div>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        {% endfor %}
+                        <li>
+                            <a class="dropdown-item text-center text-info fw-bold py-2" href="{{ url_for('orders.read_notifications') }}">
+                                <i class="bi bi-check2-all me-1"></i>Marcar como leídas
+                            </a>
+                        </li>
+                    {% else %}
+                        <li><span class="dropdown-item text-muted py-3 text-center">No hay alertas</span></li>
+                    {% endif %}
+                </ul>
+            </div>
+
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+        </div>
+    </nav>
+
+    <div class="container-fluid p-0">
+        <div class="d-flex flex-column flex-md-row min-vh-100">
+            
+            <div class="offcanvas-md offcanvas-start bg-dark text-white shadow" tabindex="-1" id="sidebarMenu" aria-labelledby="sidebarMenuLabel" style="width: 260px; flex-shrink: 0;">
+                <div class="offcanvas-header d-md-none border-bottom border-secondary">
+                    <h5 class="offcanvas-title fw-bold" id="sidebarMenuLabel"><i class="bi bi-shop me-2"></i>{{ restaurant.name if restaurant else 'RestaurantPro' }}</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" data-bs-target="#sidebarMenu" aria-label="Close"></button>
+                </div>
+
+                <div class="offcanvas-body d-flex flex-column p-3 h-100">
+                    <a href="{% if current_user.role == 'admin' %}{{ url_for('dashboard.index') }}{% elif current_user.role == 'chef' %}{{ url_for('orders.kitchen') }}{% elif current_user.role == 'cashier' %}{{ url_for('cashier.pos') }}{% else %}{{ url_for('tables.monitor') }}{% endif %}" class="d-none d-md-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none">
+                        
+                        {% if restaurant and restaurant.logo_url %}
+                            <img src="{{ url_for('static', filename=restaurant.logo_url) }}" alt="Logo" style="height: 35px; margin-right: 12px; border-radius: 5px; background: white; padding: 2px; object-fit: contain;">
+                        {% else %}
+                            <i class="bi bi-shop fs-4 me-2"></i>
+                        {% endif %}
+                        
+                        <span class="fs-5 fw-bold text-truncate" style="max-width: 180px;">{{ restaurant.name if restaurant else 'RestaurantPro' }}</span>
+                    </a>
+                    <hr class="text-white d-none d-md-block">
+                    
+                    <ul class="nav nav-pills flex-column mb-auto">
+                        
+                        {% if current_user.role == 'admin' %}
+                        <li class="nav-item">
+                            <a href="{{ url_for('dashboard.index') }}" class="sidebar-link active">
+                                <i class="bi bi-speedometer2 me-2"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item mt-1">
+                            <a href="{{ url_for('products.index') }}" class="sidebar-link">
+                                <i class="bi bi-box-seam me-2"></i> Productos
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        {% if current_user.role in ['admin', 'cashier', 'waiter'] %}
+                        <li class="nav-item mt-1">
+                            <a class="sidebar-link dropdown-toggle" href="#" data-bs-toggle="collapse" data-bs-target="#mesasMenu">
+                                <i class="bi bi-grid-3x3-gap me-2"></i> Mesas
+                            </a>
+                            <div class="collapse" id="mesasMenu">
+                                <ul class="nav flex-column ms-3">
+                                    {% if current_user.role == 'admin' %}
+                                    <li><a href="{{ url_for('tables.index') }}" class="sidebar-link py-1"><i class="bi bi-list me-2"></i> Administrar</a></li>
+                                    {% endif %}
+                                    <li><a href="{{ url_for('tables.monitor') }}" class="sidebar-link py-1"><i class="bi bi-display me-2"></i> Monitor POS</a></li>
+                                </ul>
+                            </div>        
+                        </li>
+                        {% endif %}
+                        
+                        {% if current_user.role in ['admin', 'cashier'] %}
+                        <li class="nav-item mt-1">
+                            <a class="sidebar-link dropdown-toggle" href="#" data-bs-toggle="collapse" data-bs-target="#pedidosMenu">
+                                <i class="bi bi-receipt me-2"></i> Pedidos
+                            </a>
+                            <div class="collapse" id="pedidosMenu">
+                                <ul class="nav flex-column ms-3">
+                                    <li><a href="{{ url_for('orders.index') }}" class="sidebar-link py-1"><i class="bi bi-list me-2"></i> Historial</a></li>
+                                    {% if current_user.role == 'admin' %}
+                                    <li><a href="{{ url_for('orders.kitchen') }}" class="sidebar-link link-highlight-kitchen py-1"><i class="bi bi-fire me-2"></i> Ver Cocina</a></li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+                        </li>
+                        {% endif %}
+
+                        {% if current_user.role == 'chef' %}
+                        <li class="nav-item">
+                            <a href="{{ url_for('orders.kitchen') }}" class="sidebar-link link-highlight-kitchen">
+                                <i class="bi bi-fire me-2"></i> Pantalla de Cocina
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        {% if current_user.role == 'admin' %}
+                        <li class="nav-item mb-1">
+                            <a class="nav-link text-white rounded px-3 py-2 opacity-75 {% if request.endpoint == 'reports.shifts' %}active bg-white bg-opacity-10 opacity-100 fw-bold{% else %}hover-bg-light{% endif %}" href="{{ url_for('reports.shifts') }}">
+                                <i class="bi bi-clock-history me-2"></i>Historial de Turnos
+                            </a>
+                        </li>
+                        <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-2 text-white opacity-50 text-uppercase" style="font-size: 0.75rem; letter-spacing: 1px;">
+                            <span>Administración</span>
+                        </h6>
+                        </li>
+                        {% endif %}
+
+                        {% if current_user.role == 'chef' %}
+                        <li class="nav-item">
+                            <a href="{{ url_for('orders.kitchen') }}" class="sidebar-link link-highlight-kitchen">
+                                <i class="bi bi-fire me-2"></i> Pantalla de Cocina
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        {% if current_user.role in ['admin', 'cashier'] %}
+                        <li class="nav-item">
+                            <a href="{{ url_for('cashier.pos') }}" class="sidebar-link link-highlight-cashier">
+                                <i class="bi bi-cash-coin me-2"></i> Caja / Cobros
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        {% if current_user.role == 'admin' %}
+                        <li class="nav-item mt-3 border-top border-secondary pt-2">
+                            <a class="sidebar-link dropdown-toggle" href="#" data-bs-toggle="collapse" data-bs-target="#reportesMenu">
+                                <i class="bi bi-bar-chart-line me-2"></i> Reportes
+                            </a>
+                            <div class="collapse" id="reportesMenu">
+                                <ul class="nav flex-column ms-3">
+                                    <li><a href="{{ url_for('reports.sales') }}" class="sidebar-link py-1"><i class="bi bi-graph-up me-2"></i> Ventas</a></li>
+                                    <li><a href="{{ url_for('reports.products') }}" class="sidebar-link py-1"><i class="bi bi-star me-2"></i> Más Vendidos</a></li>
+                                </ul>
+                            </div>
+                        </li>
+                        
+                        <li class="nav-item">
+                            <a href="{{ url_for('users.index') }}" class="sidebar-link">
+                                <i class="bi bi-people-fill me-2"></i> Personal
+                            </a>
+                        </li>
+
+                        <li class="nav-item border-top border-secondary mt-2 pt-2">
+                            <a href="{{ url_for('settings.index') }}" class="sidebar-link">
+                                <i class="bi bi-gear-fill me-2"></i> Ajustes / Empresa
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                    
+                    <hr class="text-white mt-auto">
+                    
+                    <div class="dropdown mb-2 d-none d-md-block"> 
+                        <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" id="dropdownNotifPC" data-bs-toggle="dropdown" aria-expanded="false">
+                            <div class="position-relative me-2">
+                                <i class="bi bi-bell-fill fs-5"></i>
+                                {% if unread_count > 0 %}
+                                <span class="position-absolute top-0 start-100 translate-middle notif-dot bg-danger border border-dark rounded-circle"></span>
+                                {% endif %}
+                            </div>
+                            <strong>Notificaciones {% if unread_count > 0 %}({{ unread_count }}){% endif %}</strong>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-dark text-small shadow" aria-labelledby="dropdownNotifPC" style="width: 250px;">
+                            {% if unread_count > 0 %}
+                                {% for n in unread_notifications %}
+                                <li>
+                                    <div class="dropdown-item py-2 text-wrap" style="cursor: default;">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <small class="text-warning fw-bold"><i class="bi bi-fire me-1"></i>Sistema</small>
+                                            <small class="text-muted" style="font-size: 0.7rem;">{{ n.time }}</small>
+                                        </div>
+                                        <span style="font-size: 0.85rem; line-height: 1.2;">{{ n.message }}</span>
+                                    </div>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                {% endfor %}
+                                <li>
+                                    <a class="dropdown-item text-center text-info fw-bold py-2" href="{{ url_for('orders.read_notifications') }}">
+                                        <i class="bi bi-check2-all me-1"></i>Marcar como leídas
+                                    </a>
+                                </li>
+                            {% else %}
+                                <li><span class="dropdown-item text-muted py-3 text-center">No hay alertas</span></li>
+                            {% endif %}
+                        </ul>
+                    </div>
+
+                    <div class="dropdown">
+                        <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" id="dropdownUser" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-person-circle fs-5 me-2"></i>
+                            <strong>{{ current_user.username }}</strong>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-dark text-small shadow" aria-labelledby="dropdownUser">
+                            <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">Cerrar Sesión</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="main-content flex-grow-1 p-3 p-md-4">
+                <header class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center pb-3 mb-4 border-bottom gap-2">
+                    <h4 class="mb-0 text-dark fw-bold">{% block header_title %}Panel de Control{% endblock %}</h4>
+                    <div>
+                        <span class="badge bg-primary fs-6 px-3 py-2 shadow-sm"><i class="bi bi-person-badge me-1"></i> {{ current_user.role | capitalize }}</span>
+                    </div>
+                </header>
+
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const Toast = Swal.mixin({
+                toast: true, position: 'top-end', showConfirmButton: false, timer: 4500, timerProgressBar: true,
+                didOpen: (toast) => {
+                    toast.addEventListener('mouseenter', Swal.stopTimer)
+                    toast.addEventListener('mouseleave', Swal.resumeTimer)
+                }
+            });
+
+            const pendingNotification = sessionStorage.getItem('notificacion_plato');
+            if (pendingNotification) {
+                Toast.fire({ icon: 'success', title: pendingNotification });
+                sessionStorage.removeItem('notificacion_plato');
+            }
+
+            const flashedMessages = {{ get_flashed_messages(with_categories=true) | tojson | safe }};
+            if (flashedMessages && flashedMessages.length > 0) {
+                flashedMessages.forEach(function(msg) {
+                    let iconType = msg[0] === 'danger' ? 'error' : msg[0];
+                    Toast.fire({ icon: iconType, title: msg[1] });
+                });
+            }
+
+            const confirmForms = document.querySelectorAll('form[onsubmit*="confirm"]');
+            confirmForms.forEach(form => {
+                const onsubmitText = form.getAttribute('onsubmit');
+                const match = onsubmitText.match(/confirm\('([^']+)'\)/);
+                const message = match ? match[1] : '¿Estás seguro de realizar esta acción?';
+                
+                form.removeAttribute('onsubmit');
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    Swal.fire({
+                        title: '¿Confirmar acción?', text: message, icon: 'warning',
+                        showCancelButton: true, confirmButtonColor: '#0d6efd',
+                        cancelButtonColor: '#dc3545', confirmButtonText: 'Sí, continuar', cancelButtonText: 'Cancelar'
+                    }).then((result) => {
+                        if (result.isConfirmed) { form.submit(); }
+                    });
+                });
+            });
+
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('/sw.js').catch(err => console.log('Error PWA:', err));
+                });
+            }
+
+            // CONFIGURACIÓN DE SUPABASE REALTIME
+            const supabaseUrl = "{{ supabase_url }}";
+            const supabaseKey = "{{ supabase_key }}";
+            
+            if (supabaseUrl && supabaseKey) {
+                const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+                
+                // Suscribirse a cambios en cualquier tabla importante (orders, order_items, tables)
+                supabase
+                  .channel('schema-db-changes')
+                  .on(
+                    'postgres_changes',
+                    { event: '*', schema: 'public' },
+                    (payload) => {
+                      const currentPath = window.location.pathname;
+                      // Refrescar si estamos en monitor, ordenes, dashboard, u otras visuales
+                      if (currentPath.includes('/tables') || currentPath.includes('/orders') || currentPath.includes('/products') || currentPath.includes('/dashboard')) { 
+                          if (!sessionStorage.getItem('notificacion_plato')) {
+                              Toast.fire({ icon: 'info', title: '¡Actualizando datos...!' });
+                          }
+                          setTimeout(() => { window.location.href = window.location.href; }, 1000); 
+                      }
+                    }
+                  )
+                  .subscribe();
+            }
+        });
+
+        // Garantizar que las filas con dropdowns abiertos siempre estén al frente
+        document.addEventListener('show.bs.dropdown', function (event) {
+            const row = event.target.closest('tr');
+            if (row) {
+                row.classList.add('dropdown-open');
+                row.style.zIndex = "9999";
+            }
+        });
+
+        document.addEventListener('hide.bs.dropdown', function (event) {
+            const row = event.target.closest('tr');
+            if (row) {
+                row.classList.remove('dropdown-open');
+                row.style.zIndex = "";
+            }
+        });
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

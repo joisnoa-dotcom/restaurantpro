@@ -1,0 +1,355 @@
+{% extends 'layout.html' %}
+
+{% block title %}Reporte de Ventas - RestaurantPro{% endblock %}
+{% block header_title %}Dashboard Comercial{% endblock %}
+
+{% block content %}
+<style>
+/* Premium SaaS Tables */
+.table-premium { border-collapse: separate; border-spacing: 0 12px; margin-top: -12px; width: 100%; }
+.table-premium thead th { border: none; font-weight: 800; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 1px; color: #a3aed1; padding: 10px 20px; }
+.table-premium tbody tr { background-color: #fff; box-shadow: 0 5px 15px rgba(0,0,0,0.03); transition: all 0.2s; border-radius: 16px; position: relative;}
+.table-premium tbody tr:hover { transform: translateY(-3px); box-shadow: 0 10px 25px rgba(67, 24, 255, 0.08); }
+.table-premium tbody td { border: none; padding: 18px 20px; vertical-align: middle; color: #2b3674; font-weight: 600; }
+.table-premium tbody td:first-child { border-top-left-radius: 16px; border-bottom-left-radius: 16px; border-left: 4px solid transparent; }
+.table-premium tbody td:last-child { border-top-right-radius: 16px; border-bottom-right-radius: 16px; text-align: right; }
+.table-premium tbody tr:hover td:first-child { border-left-color: #4318ff; }
+
+.btn-action-dots { border: none; background: #f4f7fe; color: #a3aed1; border-radius: 50%; width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s; }
+.btn-action-dots:hover, .btn-action-dots:focus { background: #4318ff; color: white; box-shadow: 0 4px 10px rgba(67, 24, 255, 0.3); }
+
+.badge-soft-success { background: linear-gradient(135deg, #05cd99 0%, #039b73 100%); color: white; padding: 6px 12px; border-radius: 8px; font-weight: 700; }
+.badge-soft-secondary { background: #e0e5f2; color: #2b3674; padding: 6px 12px; border-radius: 8px; font-weight: 800; border: 1px solid #d5dcf0; }
+</style>
+
+<!-- Filtros Superiores -->
+<div class="card shadow-sm border-0 mb-4 bg-white" style="border-radius: 20px;">
+    <div class="card-body p-4">
+        <form method="GET" action="{{ url_for('reports.sales') }}" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label text-muted fw-bold small text-uppercase">Fecha Inicial</label>
+                <input type="date" class="form-control bg-light border-0 py-2 fw-bold text-dark" name="start_date" value="{{ start_date or '' }}" style="border-radius: 12px;">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-muted fw-bold small text-uppercase">Fecha Final</label>
+                <input type="date" class="form-control bg-light border-0 py-2 fw-bold text-dark" name="end_date" value="{{ end_date or '' }}" style="border-radius: 12px;">
+            </div>
+            <div class="col-md-6 text-md-end mt-4 mt-md-0 d-flex gap-2 justify-content-md-end flex-wrap">
+                <button type="submit" class="btn btn-primary fw-bold px-4" style="border-radius: 12px; background: #4318ff; border:none;">
+                    <i class="bi bi-funnel-fill me-1"></i> Analizar
+                </button>
+                <a href="{{ url_for('reports.sales') }}" class="btn btn-light fw-bold px-3 text-secondary" style="border-radius: 12px;">
+                    <i class="bi bi-eraser-fill me-1"></i> Borrar
+                </a>
+                <div class="vr mx-2 opacity-10"></div>
+                <a href="{{ url_for('reports.export_sales', format='pdf', start_date=start_date, end_date=end_date) }}" class="btn btn-danger fw-bold shadow-sm" style="border-radius: 12px;">
+                    <i class="bi bi-filetype-pdf me-1"></i> Exportar PDF
+                </a>
+                <a href="{{ url_for('reports.export_sales', format='excel', start_date=start_date, end_date=end_date) }}" class="btn fw-bold shadow-sm" style="border-radius: 12px; background: #05cd99; color:white; border:none;">
+                    <i class="bi bi-file-earmark-excel-fill me-1"></i> Excel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- KPIs -->
+<div class="row mb-5 g-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #1b254b 0%, #111830 100%); border-radius: 20px;">
+            <div class="card-body p-4 text-white d-flex flex-column justify-content-between">
+                <div>
+                    <h6 class="text-uppercase mb-2 opacity-75 fw-bold" style="letter-spacing: 1px; font-size:0.75rem;">Ingresos Brutos</h6>
+                    <h2 class="mb-0 fw-extrabold" style="font-size: 1.8rem;">S/ {{ "%.2f"|format(total_sales) }}</h2>
+                </div>
+                <div class="mt-3">
+                    <span class="badge bg-white bg-opacity-25 text-white" style="font-size: 0.75rem;"><i class="bi bi-wallet2 me-1"></i>Ventas Totales</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-0 shadow-sm h-100" style="background: #ffffff; border-radius: 20px;">
+            <div class="card-body p-4 d-flex flex-column justify-content-between">
+                <div>
+                    <h6 class="text-uppercase mb-2 text-danger opacity-75 fw-bold" style="letter-spacing: 1px; font-size:0.75rem;">Costos Operativos</h6>
+                    <h2 class="mb-0 fw-extrabold text-dark" style="font-size: 1.8rem;">S/ {{ "%.2f"|format(total_costs) }}</h2>
+                </div>
+                <div class="mt-3">
+                    <span class="badge" style="background:#feebeb; color:#d63325; font-size: 0.75rem;"><i class="bi bi-box-seam me-1"></i>Inv. y Platos</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-0 shadow-sm h-100" style="background: #ffffff; border-radius: 20px;">
+            <div class="card-body p-4 d-flex flex-column justify-content-between">
+                <div>
+                    <h6 class="text-uppercase mb-2 text-success opacity-75 fw-bold" style="letter-spacing: 1px; font-size:0.75rem;">Utilidad Neta</h6>
+                    <h2 class="mb-0 fw-extrabold text-dark" style="font-size: 1.8rem;">S/ {{ "%.2f"|format(gross_profit) }}</h2>
+                </div>
+                <div class="mt-3">
+                    <span class="badge" style="background:#e6f9f0; color:#039b73; font-size: 0.75rem;"><i class="bi bi-graph-up-arrow me-1"></i>Margen: {{ "%.1f"|format(margin_percentage) }}%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-0 shadow-sm h-100" style="background: #ffffff; border-radius: 20px;">
+            <div class="card-body p-4 d-flex flex-column justify-content-between">
+                <div>
+                    <h6 class="text-uppercase mb-2 text-primary opacity-75 fw-bold" style="letter-spacing: 1px; font-size:0.75rem;">Flujo de Órdenes</h6>
+                    <h2 class="mb-0 fw-extrabold text-dark" style="font-size: 1.8rem;">{{ total_orders }} <span class="fs-6 text-muted fw-bold">tickets</span></h2>
+                </div>
+                <div class="mt-3">
+                    <span class="badge bg-light text-primary border shadow-sm" style="font-size: 0.75rem;"><i class="bi bi-receipt me-1"></i>T.K Promedio: S/ {{ "%.1f"|format(avg_ticket) }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if total_orders > 0 %}
+<div class="row mb-5 g-4">
+    <div class="col-md-8">
+        <div class="card shadow-sm border-0 h-100" style="border-radius: 20px;">
+            <div class="card-header bg-white py-4 px-4 border-0 fw-bold fs-5 text-dark"><i class="bi bi-graph-up me-2 text-primary"></i>Rendimiento (Últimos 7 Días)</div>
+            <div class="card-body px-4 pb-4">
+                <canvas id="salesLineChart" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-sm border-0 h-100" style="border-radius: 20px;">
+            <div class="card-header bg-white py-4 px-4 border-0 fw-bold fs-5 text-dark"><i class="bi bi-pie-chart-fill me-2 text-warning"></i>Distribución de Medios</div>
+            <div class="card-body d-flex justify-content-center pb-4">
+                <canvas id="paymentDoughnutChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- TABLA DE EGRESOS DE CAJA -->
+{% if expenses %}
+<div class="card shadow-sm border-0 mb-5 border-start border-4 border-warning" style="border-radius: 20px;">
+    <div class="card-header bg-white py-4 px-4 border-0 d-flex justify-content-between align-items-center">
+        <h5 class="fw-bold fs-5 text-dark mb-0"><i class="bi bi-box-arrow-right me-2 text-warning"></i>Egresos de Caja (Retiros de Dinero)</h5>
+        <span class="fs-4 fw-extrabold text-danger">- S/ {{ "%.2f"|format(total_expenses) }}</span>
+    </div>
+    <div class="card-body px-0 py-0 pb-3">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4">Fecha/Hora</th>
+                        <th>Cajero / Usuario</th>
+                        <th>Motivo Justificado</th>
+                        <th class="text-end pe-4">Monto Extraído</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for e in expenses %}
+                    <tr>
+                        <td class="ps-4 text-muted small fw-bold">{{ e.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td class="fw-bold">{{ e.user.username if e.user else 'Admin' }}</td>
+                        <td class="text-secondary fw-medium"><i class="bi bi-chat-quote-fill me-1 opacity-50"></i>{{ e.reason }}</td>
+                        <td class="text-end pe-4 text-danger fw-bold">S/ {{ "%.2f"|format(e.amount) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="d-flex justify-content-between align-items-center mb-3 mt-4">
+    <h4 class="fw-bold text-dark mb-0">Auditoría de Ingresos</h4>
+    <span class="badge bg-light text-dark fw-bold px-3 py-2 border shadow-sm">Trazabilidad Total</span>
+</div>
+
+<div class="table-responsive hide-scrollbar">
+    <table class="table-premium">
+        <thead>
+            <tr>
+                <th>Recibo/Ticket</th>
+                <th>Cierre Financiero</th>
+                <th>Modalidad / Cliente</th>
+                <th>Canal Operativo</th>
+                <th>Envío</th>
+                <th>Cobro Total</th>
+                <th>Liquidación</th>
+                <th class="text-end">Opciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in payments %}
+            <tr>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <div class="rounded-circle shadow-sm me-3 d-flex align-items-center justify-content-center" style="width: 45px; height: 45px; background: #f4f7fe; color: #4318ff;">
+                            <i class="bi bi-hash fs-4"></i>
+                        </div>
+                        <span class="fw-extrabold text-primary fs-6">{{ loop.index }}</span>
+                    </div>
+                </td>
+                <td class="text-muted small fw-bold">
+                    <i class="bi bi-calendar2-check-fill me-1"></i> {{ p.created_at.strftime('%Y-%m-%d %H:%M') }}
+                </td>
+                <td class="fw-bold text-dark">
+                    {% if p.order.order_type == 'delivery' %}
+                        <span class="badge bg-danger rounded-pill px-2 py-1 small mb-1"><i class="bi bi-bicycle me-1"></i> Delivery</span>
+                        <div class="small text-primary fw-bold">{{ p.order.customer_name }}</div>
+                    {% elif p.order.order_type == 'takeaway' %}
+                        <span class="badge bg-warning text-dark rounded-pill px-2 py-1 small mb-1"><i class="bi bi-bag-check-fill me-1"></i> Para Llevar</span>
+                        <div class="small text-warning fw-bold">{{ p.order.customer_name }}</div>
+                    {% else %}
+                        <i class="bi bi-geo-alt-fill text-muted me-1"></i> Mesa {{ p.order.table_rel.number if p.order.table_rel else 'N/A' }}
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="badge-soft-secondary text-uppercase"><i class="bi bi-wallet-fill me-1"></i> {{ p.payment_method }}</span>
+                </td>
+                <td class="fw-bold text-danger">
+                    S/ {{ "%.2f"|format(p.order.delivery_fee if p.order.order_type == 'delivery' else 0) }}
+                </td>
+                <td class="fs-5 fw-extrabold text-success">
+                    S/ {{ "%.2f"|format(p.amount) }}
+                </td>
+                <td>
+                    <span class="badge-soft-success"><i class="bi bi-shield-check me-1"></i> Cerrado</span>
+                </td>
+                <td>
+                    <div class="dropdown text-end">
+                        <button class="btn-action-dots" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false">
+                            <i class="bi bi-three-dots-vertical"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="border-radius: 16px; border: 1px solid #f4f7fe;">
+                            <li>
+                                <button type="button" class="dropdown-item fw-bold py-2 text-dark" data-bs-toggle="modal" data-bs-target="#modalDetalle{{ p.id }}">
+                                    <i class="bi bi-card-checklist me-2 text-primary"></i> Revisar Comprobante
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                </td>
+            </tr>
+
+            <!-- Modal UI Premium -->
+            <div class="modal fade" id="modalDetalle{{ p.id }}" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+                        <div class="modal-header border-0 pb-3 pt-4 px-4 bg-light" style="border-radius: 20px 20px 0 0;">
+                            <h5 class="modal-title fw-bold text-dark"><i class="bi bi-receipt-cutoff me-2 text-primary"></i>Desglose Ticket #{{ p.order.order_number }}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body p-0">
+                            <ul class="list-group list-group-flush px-2">
+                                {% for item in p.order.items %}
+                                    {% if item.status != 'cancelled' %}
+                                    <li class="list-group-item d-flex justify-content-between align-items-center py-3 border-0 border-bottom" style="border-color: #f4f7fe !important;">
+                                        <div class="fw-medium text-dark"><span class="badge bg-primary rounded-pill me-2">{{ item.quantity }}x</span> {{ item.product.name }}</div>
+                                        <span class="fw-extrabold text-dark">S/ {{ "%.2f"|format(item.subtotal) }}</span>
+                                    </li>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if p.order.order_type == 'delivery' and p.order.delivery_fee > 0 %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center py-3 border-0 border-bottom bg-light">
+                                    <div class="fw-bold text-danger"><i class="bi bi-truck me-2"></i> Costo de Envío (Delivery)</div>
+                                    <span class="fw-extrabold text-danger">S/ {{ "%.2f"|format(p.order.delivery_fee) }}</span>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                        <div class="modal-footer border-0 px-4 py-4 bg-light justify-content-between" style="border-radius: 0 0 20px 20px;">
+                            <span class="fw-bold text-muted text-uppercase small">Importe Total Liquidado</span>
+                            <span class="fw-extrabold text-success fs-3">S/ {{ "%.2f"|format(p.amount) }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <tr><td colspan="7" class="text-center py-5 text-muted fw-bold opacity-50"><i class="bi bi-inbox fs-1 d-block mb-2"></i>No hay registros financieros en este filtro.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+    <div id="sales-line-data" 
+         data-dates='{{ chart_dates | tojson }}' 
+         data-values='{{ chart_sales_values | tojson }}'></div>
+    <div id="payment-doughnut-data" 
+         data-methods='{{ chart_methods | tojson }}' 
+         data-values='{{ chart_method_values | tojson }}'></div>
+{% endblock %}
+
+{% block scripts %}
+{% if total_orders > 0 %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const lineDataEl = document.getElementById('sales-line-data');
+    const doughnutDataEl = document.getElementById('payment-doughnut-data');
+    
+    // Gráfico de Líneas (Tendencia de ventas) SaaS Style
+    const ctxLine = document.getElementById('salesLineChart').getContext('2d');
+    
+    let gradientLine = ctxLine.createLinearGradient(0, 0, 0, 400);
+    gradientLine.addColorStop(0, 'rgba(67, 24, 255, 0.4)');
+    gradientLine.addColorStop(1, 'rgba(67, 24, 255, 0.0)');
+
+    new Chart(ctxLine, {
+        type: 'line',
+        data: {
+            labels: JSON.parse(lineDataEl.dataset.dates),
+            datasets: [{
+                label: 'Ingresos Diarios (S/)',
+                data: JSON.parse(lineDataEl.dataset.values),
+                borderColor: '#4318ff',
+                backgroundColor: gradientLine,
+                borderWidth: 3,
+                pointBackgroundColor: '#4318ff',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointRadius: 4,
+                fill: true,
+                tension: 0.4 // Curva elegante
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { 
+                y: { beginAtZero: true, grid: { borderDash: [5, 5], color: '#f4f7fe' } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+
+    // Gráfico de Dona
+    const ctxDoughnut = document.getElementById('paymentDoughnutChart').getContext('2d');
+    new Chart(ctxDoughnut, {
+        type: 'doughnut',
+        data: {
+            labels: JSON.parse(doughnutDataEl.dataset.methods),
+            datasets: [{
+                data: JSON.parse(doughnutDataEl.dataset.values),
+                backgroundColor: ['#05cd99', '#4318ff', '#ffb300', '#ee5d50', '#a3aed1'],
+                borderWidth: 0,
+                hoverOffset: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20, font: { family: 'Inter', weight: 'bold' } } } },
+            cutout: '75%'
+        }
+    });
+});
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Carta Digital • {{ restaurant.name if restaurant else 'RestaurantPro' }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f3f4f6; -webkit-tap-highlight-color: transparent; }
+        
+        /* Ocultar barra de scroll en contenedores horizontales */
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .hero-banner { 
+            background: linear-gradient(0deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.1) 100%), url('{{ url_for("static", filename="img/login_bg.png") }}') no-repeat center center;
+            background-size: cover;
+            height: 220px;
+        }
+
+        .category-pill {
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+        .category-pill.active {
+            background-color: #000000;
+            color: #ffffff;
+            font-weight: 700;
+        }
+        
+        .product-list-card {
+            transition: transform 0.1s;
+        }
+        .product-list-card:active {
+            transform: scale(0.98);
+        }
+
+        /* Cart Drawer Animation */
+        .cart-drawer {
+            transform: translateY(100%);
+            transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+        }
+        .cart-drawer.open {
+            transform: translateY(0);
+        }
+
+        /* Float btn bounce */
+        @keyframes pop {
+            0% { transform: scale(1) translateX(-50%); }
+            50% { transform: scale(1.05) translateX(-48%); }
+            100% { transform: scale(1) translateX(-50%); }
+        }
+        .float-btn-pop {
+            animation: pop 0.3s ease;
+        }
+    </style>
+</head>
+<body class="text-gray-900 pb-28">
+
+    <!-- HERO HEADER -->
+    <div class="hero-banner relative w-full flex flex-col justify-end px-4 py-6 rounded-b-[30px] shadow-sm">
+        <div class="absolute top-4 right-4 bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full text-white text-sm font-bold border border-white/30">
+            <i class="fa-solid fa-location-dot mr-1"></i> Mesa {{ table.number }}
+        </div>
+        <h1 class="text-3xl font-extrabold text-white tracking-tight leading-tight w-full drop-shadow-md">
+            {{ restaurant.name if restaurant else 'Nuestro Menú' }}
+        </h1>
+        <p class="text-white/90 text-sm mt-1 font-medium"><i class="fa-solid fa-star text-yellow-400 text-xs"></i> 4.9 (Excelente) • Pedido Rápido</p>
+    </div>
+
+    <!-- STICKY SEARCH & CATEGORIES -->
+    <div class="sticky top-0 z-40 bg-[#f3f4f6]/90 backdrop-blur-lg pt-4 pb-2 px-4 shadow-sm">
+        <!-- Barra de búsqueda -->
+        <div class="relative w-full mb-4">
+            <i class="fa-solid fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+            <input id="search-input" type="text" placeholder="¿Qué se te antoja?" onkeyup="filtrarMenu()" class="w-full bg-white text-gray-900 placeholder:text-gray-400 px-12 py-3 rounded-2xl font-medium focus:outline-none focus:ring-2 focus:ring-black shadow-sm text-sm border border-gray-100">
+        </div>
+
+        <!-- Scroll de Categorías -->
+        <div class="flex overflow-x-auto hide-scrollbar gap-3 snap-x pb-1" id="category-container">
+            <button onclick="filtrarPorCategoria('todos')" id="btn-todos" class="category-pill active snap-start px-6 py-2 rounded-full text-sm font-medium bg-white text-gray-600 shadow-sm border border-gray-200 shrink-0">
+                ⭐ Todo
+            </button>
+            {% for c in categories %}
+            <button onclick="filtrarPorCategoria('cat_{{ c.id }}')" id="btn-cat_{{ c.id }}" class="category-pill snap-start px-6 py-2 rounded-full text-sm font-medium bg-white text-gray-600 shadow-sm border border-gray-200 shrink-0">
+                {{ c.name }}
+            </button>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- MAIN PRODUCT LIST -->
+    <main class="px-4 py-4 max-w-2xl mx-auto">
+        <div id="menu-grid" class="flex flex-col gap-4"></div>
+    </main>
+
+    <!-- STICKY CART BUTTON (Mobile App Style) -->
+    <div id="sticky-cart-btn" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 w-[92%] max-w-2xl z-40 hidden transition-all">
+        <button onclick="mostrarCarrito()" class="w-full bg-black text-white rounded-2xl py-4 px-5 flex justify-between items-center shadow-2xl hover:bg-gray-900 border border-gray-800">
+            <div class="flex items-center gap-3">
+                <div class="bg-white/20 px-3 py-1.5 rounded-lg flex items-center justify-center min-w-[32px]">
+                    <span class="font-extrabold text-sm" id="cart-qty-pill">0</span>
+                </div>
+                <span class="font-bold tracking-wide">Ver Pedido</span>
+            </div>
+            <span class="font-extrabold text-[1.15rem]" id="cart-total-btn">S/ 0.00</span>
+        </button>
+    </div>
+
+    <!-- BOTTOM SHEET CART DRAWER -->
+    <div id="cart-overlay" class="fixed inset-0 bg-black/60 z-50 hidden backdrop-blur-sm transition-opacity opacity-0" onclick="if(event.target===this)ocultarCarrito()">
+        <div id="cart-drawer-panel" class="absolute bottom-0 w-full max-w-2xl left-1/2 transform -translate-x-1/2 bg-white rounded-t-3xl min-h-[60vh] max-h-[90vh] flex flex-col cart-drawer">
+            <!-- Pestaña jaladora visual -->
+            <div class="w-full flex justify-center pt-3 pb-1" onclick="ocultarCarrito()">
+                <div class="w-12 h-1.5 bg-gray-300 rounded-full"></div>
+            </div>
+            
+            <div class="px-6 py-4 border-b flex justify-between items-center">
+                <h3 class="text-2xl font-extrabold">Tu Pedido</h3>
+                <span class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-bold">MESA {{ table.number }}</span>
+            </div>
+            
+            <div id="carrito-items" class="flex-1 overflow-y-auto p-6 space-y-6 hide-scrollbar bg-gray-50"></div>
+            
+            <div class="p-6 bg-white border-t rounded-t-3xl shadow-[0_-10px_20px_rgba(0,0,0,0.03)] pb-8 mt-auto">
+                <div class="flex justify-between items-center mb-5">
+                    <span class="text-gray-500 font-bold">Total a pagar</span>
+                    <span id="carrito-total" class="font-extrabold text-3xl">S/ 0.00</span>
+                </div>
+                <button id="btn-enviar" onclick="enviarPedido(event)" class="w-full bg-rose-600 text-white text-lg font-bold py-4 rounded-2xl shadow-lg shadow-rose-200 flex justify-center items-center gap-2 active:scale-95 transition-transform">
+                    <i class="fa-solid fa-paper-plane"></i> Confirmar y Enviar a Cocina
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DATOS DE PLATOS DESDE FLASK
+        const menuItems = [
+            {% for p in products %}
+            {
+                id: {{ p.id }},
+                categoria: "cat_{{ p.category_id }}",
+                nombre: "{{ p.name|replace('\"', '\\\"') }}",
+                descripcion: "{{ (p.description or '')|replace('\"', '\\\"')|replace('\n', ' ') }}",
+                precio: {{ p.price }},
+                imagen: {% if p.image_url %}"{{ url_for('static', filename='uploads/products/' ~ p.image_url) }}"{% else %}null{% endif %}
+            }{% if not loop.last %},{% endif %}
+            {% endfor %}
+        ];
+
+        let carrito = [];
+
+        function renderMenu(filtrados) {
+            const grid = document.getElementById('menu-grid');
+            grid.innerHTML = '';
+            if (filtrados.length === 0) {
+                grid.innerHTML = `<div class="text-center py-16"><i class="fa-solid fa-magnifying-glass text-4xl text-gray-300 mb-4"></i><h3 class="font-bold text-gray-500">No encontramos resultados</h3></div>`;
+                return;
+            }
+            
+            filtrados.forEach(item => {
+                let imgTag = item.imagen ? 
+                    `<img src="${item.imagen}" class="w-full h-full object-cover">` : 
+                    `<div class="w-full h-full bg-gray-100 flex items-center justify-center text-3xl opacity-50">🍽️</div>`;
+
+                // UberEats Layout Style (Horizontal Card)
+                grid.innerHTML += `
+                <div class="product-list-card bg-white rounded-[20px] p-4 flex items-center gap-4 shadow-sm border border-gray-100" onclick="agregarAlCarrito(${item.id})">
+                    <div class="flex-1 min-w-0 py-1">
+                        <h3 class="font-bold text-[1.1rem] leading-tight text-gray-900 mb-1 truncate">${item.nombre}</h3>
+                        <p class="text-gray-500 text-xs line-clamp-2 leading-snug mb-2 pr-2">${item.descripcion}</p>
+                        <span class="font-extrabold text-[1.05rem] text-gray-900">S/ ${item.precio.toFixed(2)}</span>
+                    </div>
+                    
+                    <div class="relative w-[110px] h-[110px] rounded-2xl overflow-hidden flex-shrink-0 bg-gray-50">
+                        ${imgTag}
+                        <div class="absolute bottom-1 right-1 bg-white text-black shadow-lg rounded-full w-8 h-8 flex items-center justify-center font-bold text-lg border border-gray-100">
+                            <i class="fa-solid fa-plus text-sm"></i>
+                        </div>
+                    </div>
+                </div>`;
+            });
+        }
+
+        function filtrarPorCategoria(categoria) {
+            document.querySelectorAll('.category-pill').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`btn-${categoria}`).classList.add('active');
+            let filtrados = categoria === 'todos' ? menuItems : menuItems.filter(item => item.categoria === categoria);
+            renderMenu(filtrados);
+            // Hacer scroll suave hacia los botones
+            document.getElementById(`btn-${categoria}`).scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        }
+
+        function filtrarMenu() {
+            const termino = document.getElementById('search-input').value.toLowerCase().trim();
+            const filtrados = menuItems.filter(item => item.nombre.toLowerCase().includes(termino));
+            renderMenu(filtrados);
+            
+            // Si busca, reiniciar pill
+            if(termino.length > 0) {
+                document.querySelectorAll('.category-pill').forEach(btn => btn.classList.remove('active'));
+            } else {
+                filtrarPorCategoria('todos');
+            }
+        }
+
+        function agregarAlCarrito(id) {
+            const plato = menuItems.find(item => item.id === id);
+            const existe = carrito.find(item => item.id === id);
+            if (existe) existe.cantidad = (existe.cantidad || 1) + 1;
+            else carrito.push({ ...plato, cantidad: 1 });
+            actualizarUI();
+            
+            // Efecto Bounce en el botón
+            const btn = document.getElementById('sticky-cart-btn');
+            btn.classList.remove('float-btn-pop');
+            void btn.offsetWidth; // trigger reflow
+            btn.classList.add('float-btn-pop');
+            
+            // Pequeña vibración en móvil
+            if (navigator.vibrate) navigator.vibrate(50);
+        }
+
+        function actualizarUI() {
+            let cant = carrito.reduce((sum, item) => sum + (item.cantidad || 1), 0);
+            let total = carrito.reduce((sum, item) => sum + ((item.cantidad || 1) * item.precio), 0);
+            
+            const btnFloat = document.getElementById('sticky-cart-btn');
+            const qtyPill = document.getElementById('cart-qty-pill');
+            const totalText = document.getElementById('cart-total-btn');
+            
+            qtyPill.textContent = cant;
+            totalText.textContent = `S/ ${total.toFixed(2)}`;
+            
+            if (cant > 0) {
+                btnFloat.classList.remove('hidden');
+            } else {
+                btnFloat.classList.add('hidden');
+                ocultarCarrito();
+            }
+        }
+
+        function mostrarCarrito() {
+            const overlay = document.getElementById('cart-overlay');
+            const drawer = document.getElementById('cart-drawer-panel');
+            const cont = document.getElementById('carrito-items');
+            
+            overlay.classList.remove('hidden');
+            // Timeout ligero para que ocurra el display:block antes de cambiar opacity y transform
+            setTimeout(() => {
+                overlay.classList.remove('opacity-0');
+                overlay.classList.add('opacity-100');
+                drawer.classList.add('open');
+            }, 10);
+            
+            let total = 0;
+            cont.innerHTML = '';
+            
+            carrito.forEach((item, index) => {
+                const sub = item.precio * item.cantidad;
+                total += sub;
+                
+                let imgTag = item.imagen ? 
+                    `<img src="${item.imagen}" class="w-16 h-16 rounded-xl object-cover shadow-sm">` : 
+                    `<div class="w-16 h-16 rounded-xl bg-gray-200 flex justify-center items-center text-xl">🍽️</div>`;
+
+                cont.innerHTML += `
+                <div class="flex gap-4 items-center bg-white p-3 rounded-2xl shadow-sm border border-gray-100">
+                    <div class="flex-shrink-0">
+                        ${imgTag}
+                    </div>
+                    <div class="flex-1">
+                        <h4 class="font-bold text-sm leading-tight text-gray-900 mb-1">${item.nombre}</h4>
+                        <span class="font-extrabold text-[1rem]">S/ ${sub.toFixed(2)}</span>
+                    </div>
+                    <div class="flex items-center gap-2 bg-gray-100 rounded-full px-1 py-1">
+                        <button onclick="cambiarCantidad(${index}, -1); event.stopPropagation();" class="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center font-bold text-lg hover:bg-gray-50">-</button>
+                        <span class="font-bold w-4 text-center text-sm">${item.cantidad}</span>
+                        <button onclick="cambiarCantidad(${index}, 1); event.stopPropagation();" class="w-8 h-8 rounded-full bg-black text-white shadow-sm flex items-center justify-center font-bold text-lg hover:bg-gray-900">+</button>
+                    </div>
+                </div>`;
+            });
+            
+            document.getElementById('carrito-total').innerHTML = `S/ ${total.toFixed(2)}`;
+        }
+
+        function ocultarCarrito() { 
+            const overlay = document.getElementById('cart-overlay');
+            const drawer = document.getElementById('cart-drawer-panel');
+            
+            drawer.classList.remove('open');
+            overlay.classList.remove('opacity-100');
+            overlay.classList.add('opacity-0');
+            
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+            }, 400); // duración de la transición
+        }
+        
+        function cambiarCantidad(idx, cambio) { 
+            carrito[idx].cantidad = Math.max(0, carrito[idx].cantidad + cambio); 
+            if(carrito[idx].cantidad === 0) {
+                carrito.splice(idx, 1);
+            }
+            actualizarUI();
+            if(carrito.length > 0 && document.getElementById('cart-drawer-panel').classList.contains('open')) {
+                mostrarCarrito(); // Re-render content si el modal está abierto
+            }
+        }
+
+        function enviarPedido(event) {
+            if (carrito.length === 0) return;
+            const btn = event.currentTarget;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> ENVIANDO...';
+            btn.disabled = true;
+
+            fetch("{{ url_for('menu.place_order', qr_code=table.qr_code) }}", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ cart: carrito })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    ocultarCarrito();
+                    
+                    // Sustituimos todo el body por un panel de éxito gigantesco nativo
+                    document.body.innerHTML = `
+                        <div class="h-screen w-full bg-rose-600 flex flex-col justify-center items-center text-white p-6 tex-center">
+                            <div class="bg-white rounded-full p-6 shadow-2xl mb-6">
+                                <i class="fa-solid fa-check text-5xl text-rose-600"></i>
+                            </div>
+                            <h2 class="text-4xl font-extrabold mb-3">¡Oído Cocina!</h2>
+                            <p class="text-rose-100 text-lg text-center mb-8">El chef ya recibió tu pedido para la Mesa {{ table.number }}.<br>Prepara tu espacio que va volando 🚀</p>
+                            <button onclick="window.location.reload()" class="bg-white text-rose-600 font-bold px-8 py-3 rounded-full shadow-lg">Pedir algo más</button>
+                        </div>
+                    `;
+                    carrito = [];
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(err => alert('Error al contactar la cocina.'))
+            .finally(() => {
+                if(document.body.contains(btn)){ // si no recargó la pág.
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
+            });
+        }
+
+        window.onload = () => { renderMenu(menuItems); };
+    </script>
+</body>
+</html>

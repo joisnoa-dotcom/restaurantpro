@@ -1,0 +1,211 @@
+{% extends 'layout.html' %}
+
+{% block title %}Gestión de Usuarios - RestaurantPro{% endblock %}
+{% block header_title %}Personal y Accesos{% endblock %}
+
+{% block content %}
+<style>
+/* Premium SaaS Tables */
+.table-premium { border-collapse: separate; border-spacing: 0 12px; margin-top: -12px; width: 100%; }
+.table-premium thead th { border: none; font-weight: 800; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 1px; color: #a3aed1; padding: 10px 20px; }
+.table-premium tbody tr { background-color: #fff; box-shadow: 0 5px 15px rgba(0,0,0,0.03); transition: all 0.2s; border-radius: 16px; position: relative;}
+.table-premium tbody tr:hover { transform: translateY(-3px); box-shadow: 0 10px 25px rgba(67, 24, 255, 0.08); }
+.table-premium tbody td { border: none; padding: 18px 20px; vertical-align: middle; color: #2b3674; font-weight: 600; }
+.table-premium tbody td:first-child { border-top-left-radius: 16px; border-bottom-left-radius: 16px; border-left: 4px solid transparent; }
+.table-premium tbody td:last-child { border-top-right-radius: 16px; border-bottom-right-radius: 16px; text-align: right; }
+.table-premium tbody tr:hover td:first-child { border-left-color: #4318ff; }
+
+/* Menú 3 puntos */
+.btn-action-dots { border: none; background: #f4f7fe; color: #a3aed1; border-radius: 50%; width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s; }
+.btn-action-dots:hover, .btn-action-dots:focus { background: #4318ff; color: white; box-shadow: 0 4px 10px rgba(67, 24, 255, 0.3); }
+
+/* Gradientes para Badges (Roles y Estado) */
+.badge-soft-admin { background: linear-gradient(135deg, #ee5d50 0%, #d63325 100%); color: white; padding: 6px 12px; border-radius: 8px; font-weight: 700; }
+.badge-soft-cashier { background: linear-gradient(135deg, #f6c000 0%, #d8a000 100%); color: #111; padding: 6px 12px; border-radius: 8px; font-weight: 800; }
+.badge-soft-chef { background: linear-gradient(135deg, #a3aed1 0%, #7d8bb3 100%); color: #fff; padding: 6px 12px; border-radius: 8px; font-weight: 700; }
+.badge-soft-waiter { background: #e0e5f2; color: #2b3674; padding: 6px 12px; border-radius: 8px; font-weight: 800; border: 1px solid #d5dcf0; }
+
+.status-active { color: #05cd99; padding: 4px 10px; background: rgba(5,205,153,0.1); border-radius: 20px; font-size: 0.8rem; }
+.status-inactive { color: #a3aed1; padding: 4px 10px; background: #f4f7fe; border-radius: 20px; font-size: 0.8rem; }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold text-dark mb-1">Directorio de Empleados</h4>
+        <p class="text-muted small fw-medium">Gestiona permisos, cocineros, mozos y administradores.</p>
+    </div>
+    <button type="button" class="btn btn-primary btn-lg fw-bold px-4 shadow-sm" style="border-radius: 14px; background: #4318ff; border: none;" data-bs-toggle="modal" data-bs-target="#createUserModal">
+        <i class="bi bi-person-plus-fill me-2"></i> Alta Personal
+    </button>
+</div>
+
+<div class="table-responsive hide-scrollbar">
+    <table class="table-premium">
+        <thead>
+            <tr>
+                <th>Credencial (Usuario)</th>
+                <th>Datos Personales</th>
+                <th>Privilegios</th>
+                <th>Estado</th>
+                <th>Último Acceso</th>
+                <th class="text-end">Opciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for u in users %}
+            <tr>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <div class="rounded-circle shadow-sm me-3 d-flex align-items-center justify-content-center" style="width: 45px; height: 45px; background: #f4f7fe; color: #4318ff;">
+                            <i class="bi bi-person-bounding-box fs-5"></i>
+                        </div>
+                        <span class="fw-extrabold text-dark fs-6">{{ u.username }}</span>
+                    </div>
+                </td>
+                <td>
+                    <span class="d-block fw-bold text-dark">{{ u.full_name }}</span>
+                    <small class="text-muted fw-medium">{{ u.email }}</small>
+                </td>
+                <td>
+                    {% if u.role == 'admin' %}<span class="badge-soft-admin"><i class="bi bi-shield-lock-fill me-1"></i> Admin</span>
+                    {% elif u.role == 'cashier' %}<span class="badge-soft-cashier"><i class="bi bi-wallet2 me-1"></i> Cajero</span>
+                    {% elif u.role == 'chef' %}<span class="badge-soft-chef"><i class="bi bi-fire me-1"></i> Chef</span>
+                    {% else %}<span class="badge-soft-waiter"><i class="bi bi-person-walking me-1"></i> Mozo</span>{% endif %}
+                </td>
+                <td>
+                    {% if u.is_active %}
+                        <span class="status-active fw-bold"><i class="bi bi-circle-fill" style="font-size: 0.5rem; vertical-align: middle; margin-right: 4px;"></i> Activo</span>
+                    {% else %}
+                        <span class="status-inactive fw-bold"><i class="bi bi-circle-fill" style="font-size: 0.5rem; vertical-align: middle; margin-right: 4px;"></i> Inactivo</span>
+                    {% endif %}
+                </td>
+                <td class="text-muted small fw-bold">
+                    {% if u.last_login %}<i class="bi bi-clock-history me-1"></i> {{ u.last_login.strftime('%Y-%m-%d %H:%M') }}{% else %}Nunca{% endif %}
+                </td>
+                <td>
+                    <div class="dropdown text-end">
+                        <button class="btn-action-dots" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false">
+                            <i class="bi bi-three-dots-vertical"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="border-radius: 16px; border: 1px solid #f4f7fe;">
+                            <li>
+                                <button type="button" class="dropdown-item fw-bold py-2 text-dark" data-bs-toggle="modal" data-bs-target="#editUserModal{{ u.id }}">
+                                    <i class="bi bi-pencil-square me-2 text-primary"></i> Modificar Ficha
+                                </button>
+                            </li>
+                            {% if current_user.id != u.id %}
+                            <li><hr class="dropdown-divider opacity-10"></li>
+                            <li>
+                                <form action="{{ url_for('users.delete', id=u.id) }}" method="POST" class="m-0" onsubmit="return confirm('¿Retirar privilegios y eliminar a este usuario permanentemente?');">
+                                    <button type="submit" class="dropdown-item fw-bold py-2 text-danger">
+                                        <i class="bi bi-person-x-fill me-2"></i> Eliminar Registro
+                                    </button>
+                                </form>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </td>
+            </tr>
+
+            <!-- Modal Editor Mantenido Igual, Solo Bordes Mejorados -->
+            <div class="modal fade" id="editUserModal{{ u.id }}" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+                        <form action="{{ url_for('users.edit', id=u.id) }}" method="POST">
+                            <div class="modal-header border-0 bg-light pb-0 pt-4 px-4" style="border-radius: 20px 20px 0 0;">
+                                <h4 class="modal-title fw-bold"><i class="bi bi-person-gear me-2 text-primary"></i>Perfíl de {{ u.username }}</h4>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body px-4 py-4">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold text-muted small">Nombre Completo</label>
+                                    <input type="text" class="form-control form-control-lg bg-light border-0" name="full_name" value="{{ u.full_name }}" required style="border-radius:12px;">
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold text-muted small">Usuario</label>
+                                        <input type="text" class="form-control form-control-lg bg-light border-0" name="username" value="{{ u.username }}" required style="border-radius:12px;">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold text-muted small">Rol</label>
+                                        <select class="form-select form-select-lg bg-light border-0" name="role" style="border-radius:12px;">
+                                            <option value="waiter" {% if u.role == 'waiter' %}selected{% endif %}>Mozo</option>
+                                            <option value="chef" {% if u.role == 'chef' %}selected{% endif %}>Cocinero</option>
+                                            <option value="cashier" {% if u.role == 'cashier' %}selected{% endif %}>Cajero</option>
+                                            <option value="admin" {% if u.role == 'admin' %}selected{% endif %}>Administrador</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold text-muted small">Correo Electrónico</label>
+                                    <input type="email" class="form-control form-control-lg bg-light border-0" name="email" value="{{ u.email }}" required style="border-radius:12px;">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold text-muted small">Nueva Contraseña <small class="text-danger">(Opcional)</small></label>
+                                    <input type="password" class="form-control form-control-lg bg-light border-0" name="password" placeholder="••••••••" style="border-radius:12px;">
+                                </div>
+                                <div class="form-check form-switch fs-5 mt-4">
+                                    <input class="form-check-input" type="checkbox" name="is_active" id="is_active{{ u.id }}" {% if u.is_active %}checked{% endif %}>
+                                    <label class="form-check-label fs-6 mt-1 fw-bold text-dark" for="is_active{{ u.id }}">Mantener Acceso Activo</label>
+                                </div>
+                            </div>
+                            <div class="modal-footer border-0 px-4 pb-4">
+                                <button type="button" class="btn btn-light fw-bold px-4" data-bs-dismiss="modal" style="border-radius: 12px;">Cancelar</button>
+                                <button type="submit" class="btn btn-primary fw-bold px-4" style="border-radius: 12px; background: #4318ff; border:none;">Guardar Cambios</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="modal fade" id="createUserModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+            <form action="{{ url_for('users.create') }}" method="POST">
+                <div class="modal-header border-0 bg-light pb-0 pt-4 px-4" style="border-radius: 20px 20px 0 0;">
+                    <h4 class="modal-title fw-bold"><i class="bi bi-person-plus-fill me-2 text-primary"></i>Registrar Empleado</h4>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body px-4 py-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted small">Nombre Completo</label>
+                        <input type="text" class="form-control form-control-lg bg-light border-0" name="full_name" placeholder="Ej: Juan Pérez" required style="border-radius:12px;">
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-muted small">Usuario Login</label>
+                            <input type="text" class="form-control form-control-lg bg-light border-0" name="username" placeholder="juanperez" required style="border-radius:12px;">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-muted small">Rol Privilegio</label>
+                            <select class="form-select form-select-lg bg-light border-0" name="role" required style="border-radius:12px;">
+                                <option value="waiter">Mozo</option>
+                                <option value="chef">Cocinero</option>
+                                <option value="cashier">Cajero</option>
+                                <option value="admin">Administrador</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted small">Correo Electrónico</label>
+                        <input type="email" class="form-control form-control-lg bg-light border-0" name="email" placeholder="juan@restaurant.com" required style="border-radius:12px;">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted small">Contraseña Segura</label>
+                        <input type="password" class="form-control form-control-lg bg-light border-0" name="password" required style="border-radius:12px;">
+                    </div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4">
+                    <button type="button" class="btn btn-light fw-bold px-4" data-bs-dismiss="modal" style="border-radius:12px;">Cancelar</button>
+                    <button type="submit" class="btn btn-primary fw-bold px-4" style="border-radius:12px; background: #4318ff; border:none;">Generar Credencial</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

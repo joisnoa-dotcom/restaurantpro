@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comanda - {% if order.order_type == 'delivery' %}Delivery{% elif order.order_type == 'takeaway' %}Para Llevar{% else %}Mesa {{ order.table_rel.number }}{% endif %}</title>
+    <style>
+        body { font-family: 'Courier New', Courier, monospace; color: #000; margin: 0; padding: 5px 15px; width: 280px; }
+        .text-center { text-align: center; }
+        .fw-bold { font-weight: bold; }
+        .text-large { font-size: 20px; }
+        .text-xlarge { font-size: 28px; }
+        .mesa-box { border: 3px solid #000; padding: 8px; margin: 15px 0; text-transform: uppercase; }
+        .item-row { margin-bottom: 12px; border-bottom: 1px dashed #000; padding-bottom: 8px; }
+        .notas { font-weight: bold; font-style: italic; font-size: 16px; margin-top: 4px; } 
+        @media print { @page { margin: 0; } body { margin: 0; padding: 10px; width: 100%; } }
+    </style>
+</head>
+<body>
+    <div class="text-center border-bottom pb-2">
+        <div class="fw-bold" style="font-size: 14px;">{{ restaurant.name|upper if restaurant else 'RESTAURANTE' }}</div>
+        <div class="fw-bold text-large mt-1">PEDIDO DE COCINA</div>
+        <div>Fecha: {{ order.created_at.strftime('%d/%m/%Y %H:%M') }}</div>
+        <div>Mozo: {{ current_user.username }}</div>
+    </div>
+    
+    <div class="text-center mesa-box text-xlarge fw-bold">
+        {% if order.order_type == 'delivery' %}
+            DELIVERY<br>
+            <span style="font-size:16px;">{{ order.customer_name }}<br>{{ order.delivery_address }}</span>
+        {% elif order.order_type == 'takeaway' %}
+            PARA LLEVAR<br>
+            <span style="font-size:16px;">{{ order.customer_name }}</span>
+        {% else %}
+            MESA {{ order.table_rel.number }}
+        {% endif %}
+    </div>
+
+    <div style="margin-top: 15px;">
+        {% for item in order.items %}
+        {% if item.status != 'cancelled' %}
+        <div class="item-row">
+            <div class="fw-bold text-large">{{ item.quantity }}x {{ item.product.name }}</div>
+            {% if item.notes %}
+            <div class="notas">>> NOTA: {{ item.notes }}</div>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+
+    <div class="text-center" style="margin-top: 25px; padding-bottom: 20px;">
+        -- FIN DE PEDIDO --
+    </div>
+
+    <script>
+        window.onload = function() { window.print(); }
+    </script>
+</body>
+</html>

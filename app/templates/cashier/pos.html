@@ -1,0 +1,232 @@
+{% extends 'layout.html' %}
+
+{% block title %}Caja - RestaurantPro{% endblock %}
+{% block header_title %}Central de Caja y Cobros{% endblock %}
+
+{% block content %}
+<style>
+.session-banner {
+    border-radius: 24px;
+    padding: 2.5rem 2rem;
+    color: white;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.08);
+    position: relative;
+    overflow: hidden;
+}
+.session-active {
+    background: linear-gradient(135deg, #05cd99 0%, #028e6a 100%);
+}
+.session-closed {
+    background: linear-gradient(135deg, #1b254b 0%, #0d1226 100%);
+}
+.bg-shape {
+    position: absolute;
+    right: -10%;
+    top: -50%;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 70%);
+    border-radius: 50%;
+}
+.ticket-card {
+    background: #fff;
+    border-radius: 20px;
+    border: none;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.04);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-top: 6px solid #4318ff;
+    position: relative;
+}
+.ticket-card::before {
+    content: '';
+    position: absolute;
+    top: 50px; left: -10px;
+    width: 20px; height: 20px;
+    background-color: #f4f7fe;
+    border-radius: 50%;
+}
+.ticket-card::after {
+    content: '';
+    position: absolute;
+    top: 50px; right: -10px;
+    width: 20px; height: 20px;
+    background-color: #f4f7fe;
+    border-radius: 50%;
+}
+.ticket-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(67, 24, 255, 0.1);
+}
+.ticket-amount {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: #1b254b;
+    letter-spacing: -1.5px;
+    margin: 1.5rem 0;
+}
+.btn-charge {
+    background: #4318ff;
+    color: #fff;
+    border-radius: 14px;
+    font-weight: 800;
+    padding: 14px;
+    transition: all 0.2s;
+    font-size: 1.1rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.btn-charge:hover {
+    background: #3311db;
+    color: #fff;
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px rgba(67, 24, 255, 0.3);
+}
+.empty-state-hub {
+    border: 3px dashed #e2e8f0;
+    border-radius: 24px;
+    padding: 5rem 2rem;
+    background: #ffffff;
+}
+</style>
+
+<div class="row mb-5">
+    <div class="col-12">
+        <div class="session-banner {% if current_session %}session-active{% else %}session-closed{% endif %} d-flex flex-column flex-md-row align-items-md-center justify-content-between">
+            <div class="bg-shape"></div>
+            <div style="z-index: 1;">
+                <h2 class="fw-bold mb-2 text-white" style="font-size: 2.2rem;">
+                    <i class="bi bi-wallet2 me-2"></i> Caja: 
+                    {% if current_session %}OPERATIVA{% else %}CERRADA{% endif %}
+                </h2>
+                {% if current_session %}
+                    <p class="mb-0 fs-5 text-white opacity-75 fw-medium"><i class="bi bi-cash-coin me-1"></i> Apertura técnica a las {{ current_session.opening_time.strftime('%H:%M') }} con S/ {{ current_session.opening_amount }} de fondo.</p>
+                {% else %}
+                    <p class="mb-0 fs-5 text-white opacity-75 fw-medium">Ingresa el fondo de apertura para comenzar la jornada y habilitar cobros.</p>
+                {% endif %}
+            </div>
+            <div style="z-index: 1;" class="mt-4 mt-md-0">
+                {% if current_user.role == 'admin' %}
+                    {% if current_session %}
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-warning btn-lg fw-bold px-3 shadow-sm" style="border-radius: 16px;" data-bs-toggle="modal" data-bs-target="#expenseModal">
+                                <i class="bi bi-box-arrow-right me-1"></i> Egreso
+                            </button>
+                            <form action="{{ url_for('cashier.close_session') }}" method="POST" class="m-0">
+                                <button type="submit" class="btn btn-light btn-lg fw-bold text-danger px-4 shadow-sm" style="border-radius: 16px;" onclick="return confirm('¿Estás 100% seguro de cerrar la jornada actual?');">
+                                    <i class="bi bi-lock-fill me-1"></i> Cerrar Jornada
+                                </button>
+                            </form>
+                        </div>
+                    {% else %}
+                        <form action="{{ url_for('cashier.open_session') }}" method="POST" class="d-flex gap-2 bg-white p-2 shadow-sm" style="border-radius: 18px;">
+                            <span class="fs-4 fw-bold text-muted ps-3 py-2">S/</span>
+                            <input type="number" step="0.01" min="0" name="opening_amount" class="form-control form-control-lg border-0 shadow-none fw-bold text-dark fs-4" placeholder="0.00" required style="max-width: 120px; background: transparent;">
+                            <button type="submit" class="btn btn-success btn-lg fw-bold px-4" style="border-radius: 14px; background: #05cd99; border:none;">
+                                <i class="bi bi-unlock-fill me-1"></i> Empezar
+                            </button>
+                        </form>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-12 mb-2 d-flex align-items-center">
+        <h4 class="fw-bold text-dark mb-0 me-3"><i class="bi bi-receipt-cutoff me-2" style="color: #4318ff;"></i>Cuentas por Cobrar</h4>
+        {% if orders|length > 0 %}
+            <span class="badge rounded-pill bg-danger fs-6 shadow-sm">{{ orders|length }} en espera</span>
+        {% endif %}
+    </div>
+    
+    {% for o in orders %}
+    <div class="col-sm-6 col-md-4 col-lg-3">
+        <div class="ticket-card px-2 py-3 h-100 d-flex flex-column">
+            <!-- Línea punteada de ticket -->
+            <div style="border-bottom: 2px dashed #f4f7fe; position: absolute; top: 60px; left: 10px; right: 10px; z-index: 0;"></div>
+            
+            <div class="card-body position-relative z-1">
+                <div class="d-flex justify-content-between align-items-start mb-4">
+                    <div>
+                        <span class="badge bg-dark fs-6 px-3 shadow-sm mb-1" style="border-radius: 8px;">Mesa {{ o.table_rel.number }}</span>
+                        <p class="text-muted small fw-bold mb-0 mt-1">#{{ o.order_number }}</p>
+                    </div>
+                    <div class="bg-light rounded p-2 text-center text-muted lh-1 border border-white shadow-sm">
+                        <i class="bi bi-clock d-block mb-1"></i>
+                        <small class="fw-bold">{{ o.created_at.strftime('%H:%M') }}</small>
+                    </div>
+                </div>
+                
+                <h2 class="ticket-amount text-center position-relative">S/ {{ "%.2f"|format(o.total_amount) }}</h2>
+                
+                <div class="d-flex align-items-center text-muted small p-2 bg-light rounded-3 mt-4 mb-2 shadow-sm">
+                    <div class="bg-white rounded p-1 me-2 shadow-sm">
+                        <i class="bi bi-person-fill fs-5 text-primary align-middle"></i>
+                    </div>
+                    <div class="lh-sm">
+                        <span class="d-block text-uppercase" style="font-size: 0.65rem; font-weight: 800; letter-spacing: 1px;">Atendido por</span>
+                        <span class="fw-bold text-dark fs-6">{{ o.waiter.full_name }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-footer bg-transparent border-0 pt-0 mt-auto position-relative z-1 px-3">
+                {% if o.total_amount > 0 %}
+                    {% if current_session %}
+                        <a href="{{ url_for('cashier.checkout', order_id=o.id) }}" class="btn btn-charge w-100 d-block text-center text-decoration-none shadow-sm">
+                            <i class="bi bi-currency-dollar"></i> Cobrar Ahora
+                        </a>
+                    {% else %}
+                        <button class="btn btn-secondary w-100 fw-bold border-0 text-white" style="border-radius:14px; padding: 14px; background:#a3aed1;" disabled>Caja Cerrada</button>
+                    {% endif %}
+                {% else %}
+                    <button class="btn w-100 fw-bold border-0" style="border-radius:14px; padding: 14px; background:#f4f7fe; color: #8f9bba;" disabled>Esperando Platos</button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12 text-center">
+        <div class="empty-state-hub shadow-sm">
+            <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex p-4 mb-3">
+                <i class="bi bi-check2-circle" style="font-size: 4rem; color: #05cd99;"></i>
+            </div>
+            <h3 class="fw-bold text-dark mb-2">Jornada limpia</h3>
+            <p class="text-muted fs-5">No hay cuentas pendientes de cobro por el momento.</p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Modal para Retiro de Efectivo (Egreso) -->
+<div class="modal fade" id="expenseModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+            <div class="modal-header border-0 pb-3 pt-4 px-4 bg-light" style="border-radius: 20px 20px 0 0;">
+                <h5 class="modal-title fw-bold text-dark"><i class="bi bi-box-arrow-right me-2 text-warning"></i>Registrar Egreso de Caja</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('cashier.add_expense') }}" method="POST">
+                <div class="modal-body p-4">
+                    <div class="alert alert-warning border-0 rounded-3 small fw-bold">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>Este retiro se descontará directamente del cálculo del cierre de caja final.
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted fw-bold small text-uppercase">Monto a Retirar (S/)</label>
+                        <input type="number" step="0.01" min="0.1" name="amount" class="form-control form-control-lg bg-light border-0 fw-bold fs-3 text-dark" style="border-radius: 14px;" required placeholder="0.00">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label text-muted fw-bold small text-uppercase">Motivo o Justificación</label>
+                        <textarea class="form-control bg-light border-0 fw-medium" name="reason" rows="2" style="border-radius: 14px; resize: none;" required placeholder="Ej: Pago de hielo, gas, artículos de limpieza..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 px-4 py-3 bg-light justify-content-end" style="border-radius: 0 0 20px 20px;">
+                    <button type="button" class="btn btn-light fw-bold px-4" data-bs-dismiss="modal" style="border-radius: 12px;">Cancelar</button>
+                    <button type="submit" class="btn btn-warning fw-bold px-4 shadow-sm text-dark" style="border-radius: 12px;"><i class="bi bi-check-circle-fill me-1"></i> Extraer Dinero</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ticket de Cierre - Turno #{{ num_turno }}</title>
+    <!-- Fonts and Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Courier Prime', monospace;
+            background-color: #e2e8f0;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+            margin: 0;
+            color: #000;
+        }
+
+        .ticket {
+            background-color: #fff;
+            width: 320px;
+            /* Tamaño estándar ticket térmico 80mm */
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .font-bold {
+            font-weight: bold;
+        }
+
+        .divider {
+            border-top: 1px dashed #000;
+            margin: 10px 0;
+        }
+
+        .header {
+            margin-bottom: 15px;
+        }
+
+        .header h2 {
+            margin: 0 0 5px 0;
+            font-size: 1.2rem;
+            text-transform: uppercase;
+        }
+
+        .item-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        .warning-box {
+            border: 1px solid #000;
+            padding: 10px;
+            text-align: center;
+            margin-top: 15px;
+            font-size: 0.95rem;
+        }
+
+        /* Botones Flotantes Ocultos al Imprimir */
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            background: #4318ff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-secondary {
+            background: #64748b;
+        }
+
+        @media print {
+            body {
+                background-color: #fff;
+                padding: 0;
+            }
+
+            .ticket {
+                box-shadow: none;
+                width: 100%;
+                max-width: 300px;
+                padding: 0;
+            }
+
+            .controls {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="ticket">
+        <div class="header text-center">
+            <h2>{{ restaurant.name if restaurant else 'RestaurantPro' }}</h2>
+            <div class="font-bold">*** REPORTE CORTE ***</div>
+            <div style="font-size: 0.85rem;">TURNO DE CAJA #{{ num_turno }}</div>
+            <div style="font-size: 0.85rem;">Impreso: {{ session.closing_time.strftime('%d/%m/%Y %H:%M') if
+                session.closing_time else 'En curso' }}</div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="item-row font-bold">
+            <span>CAJERO:</span>
+            <span>{{ session.user.username|upper }}</span>
+        </div>
+        <div class="item-row">
+            <span>Inicio:</span>
+            <span>{{ session.opening_time.strftime('%H:%M %p') }}</span>
+        </div>
+        <div class="item-row">
+            <span>Término:</span>
+            <span>{{ session.closing_time.strftime('%H:%M %p') if session.closing_time else '--' }}</span>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="item-row">
+            <span>(+) FONDO INICIAL (APERTURA)</span>
+            <span class="font-bold">S/ {{ "%.2f"|format(session.opening_amount) }}</span>
+        </div>
+
+        <div class="divider"></div>
+        <div class="text-center font-bold" style="font-size: 0.9rem; margin-bottom: 5px;">VENTAS REGISTRADAS</div>
+
+        <div class="item-row">
+            <span>&bull; Efectivo (Cash)</span>
+            <span>S/ {{ "%.2f"|format(cash_sales) }}</span>
+        </div>
+        <div class="item-row">
+            <span>&bull; Digital (Yape/POS)</span>
+            <span>S/ {{ "%.2f"|format(digital_sales) }}</span>
+        </div>
+        <div class="item-row font-bold" style="margin-top: 5px;">
+            <span>(+) TOTAL VENTAS:</span>
+            <span>S/ {{ "%.2f"|format(total_sales) }}</span>
+        </div>
+
+        <div class="divider"></div>
+        <div class="text-center font-bold" style="font-size: 0.9rem; margin-bottom: 5px;">EGRESOS FÍSICOS DE CAJA</div>
+
+        {% if expenses %}
+        {% for e in expenses %}
+        <div class="item-row" style="font-size: 0.8rem;">
+            <span style="max-width: 200px; word-wrap: break-word;">- {{ e.reason }}</span>
+            <span>S/ {{ "%.2f"|format(e.amount) }}</span>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="item-row text-center" style="font-size: 0.8rem; justify-content: center;">
+            <span>Sin retiros de dinero registrados.</span>
+        </div>
+        {% endif %}
+        <div class="item-row font-bold" style="margin-top: 5px;">
+            <span>(-) TOTAL EGRESOS:</span>
+            <span>S/ {{ "%.2f"|format(total_expenses) }}</span>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- CALCULO FINANCIERO -->
+        <div class="item-row text-right" style="font-size: 0.8rem; flex-direction: column;">
+            <div class="item-row" style="margin-bottom:0;">
+                <span>Total Calculado en Sistema:</span>
+                <span class="font-bold">S/ {{ "%.2f"|format(session.expected_amount) }}</span>
+            </div>
+            <div class="item-row" style="margin-bottom:0;">
+                <span>Entrega Fija del Cajero:</span>
+                <span class="font-bold">S/ {{ "%.2f"|format(session.closing_amount) }}</span>
+            </div>
+        </div>
+
+        {% set disparity = (session.closing_amount|float) - (session.expected_amount|float) %}
+        <div class="warning-box">
+            <div style="margin-bottom: 5px; font-weight: bold;">RESULTADO DE CAJA</div>
+            {% if disparity == 0 %}
+            <div>CUADRE PERFECTO. S/ 0.00</div>
+            {% elif disparity > 0 %}
+            <div>SOBRANTE DECLARADO:</div>
+            <div class="font-bold" style="font-size: 1.2rem;">+ S/ {{ "%.2f"|format(disparity|abs) }}</div>
+            {% else %}
+            <div>FALTANTE DETECTADO:</div>
+            <div class="font-bold" style="font-size: 1.2rem;">- S/ {{ "%.2f"|format(disparity|abs) }}</div>
+            {% endif %}
+        </div>
+
+        <br>
+        <div class="text-center" style="margin-top: 30px;">
+            <div style="border-top: 1px solid #000; width: 80%; margin: 0 auto; padding-top: 5px;">
+                Firma Cajero/a: {{ session.user.username }}
+            </div>
+        </div>
+        <br><br>
+
+    </div>
+
+    <div class="controls">
+        {% if current_user.role == 'admin' %}
+        <a href="{{ url_for('reports.shifts') }}" class="btn btn-secondary">Volver al Historial</a>
+        {% else %}
+        <a href="{{ url_for('cashier.pos') }}" class="btn btn-secondary">Ir a Hub Caja</a>
+        {% endif %}
+        <button onclick="window.print()" class="btn">Imprimir Ticket Z</button>
+    </div>
+
+</body>
+
+</html>

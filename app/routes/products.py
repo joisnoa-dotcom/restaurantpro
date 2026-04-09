@@ -1,0 +1,138 @@
+import os
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
+from flask_login import login_required
+from app.utils.decorators import role_required
+from werkzeug.utils import secure_filename
+from app.models.product import Product
+from app.models.category import Category
+from app import db
+from app.utils.supabase_client import supabase_client
+
+products_bp = Blueprint('products', __name__, url_prefix='/products')
+
+# Extensiones permitidas para las imágenes
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@products_bp.route('/')
+@login_required
+@role_required('admin')
+def index():
+    # Obtenemos todos los productos junto con su categoría
+    products = Product.query.join(Category).order_by(Category.name, Product.name).all()
+    return render_template('products/list.html', products=products)
+
+@products_bp.route('/create', methods=['GET', 'POST'])
+@login_required
+@role_required('admin')
+def create():
+    if request.method == 'POST':
+        name = request.form.get('name')
+        description = request.form.get('description')
+        price = request.form.get('price')
+        category_id = request.form.get('category_id')
+        preparation_time = request.form.get('preparation_time')
+        track_stock = 'track_stock' in request.form
+        stock = request.form.get('stock', 0)
+        
+        # Manejo de la imagen
+        image_file = request.files.get('image')
+        filename = None
+        
+        if image_file and image_file.filename != '' and allowed_file(image_file.filename):
+            import time
+            filename = secure_filename(image_file.filename)
+            file_ext = filename.rsplit('.', 1)[1].lower()
+            new_filename = f"prod_{int(time.time())}.{file_ext}"
+            file_bytes = image_file.read()
+            
+            try:
+                supabase_client.storage.from_('restaurant_assets').upload(new_filename, file_bytes)
+                public_url = supabase_client.storage.from_('restaurant_assets').get_public_url(new_filename)
+                filename = public_url # Guardaremos la URL entera en la db
+            except Exception as e:
+                flash(f'Error subiendo imagen a Supabase: {str(e)}', 'danger')
+                filename = None
+            
+        new_product = Product(
+            name=name,
+            description=description,
+            price=price,
+            category_id=category_id,
+            preparation_time=preparation_time,
+            track_stock=track_stock,
+            stock=stock,
+            image_url=filename
+        )
+        
+        db.session.add(new_product)
+        db.session.commit()
+        
+        # (SocketIO removido - Se usaría Supabase Realtime via Postgres)
+        
+        flash('Producto agregado correctamente.', 'success')
+        return redirect(url_for('products.index'))
+        
+    categories = Category.query.all()
+    return render_template('products/create.html', categories=categories)
+
+@products_bp.route('/edit/<int:id>', methods=['GET', 'POST'])
+@login_required
+@role_required('admin')
+def edit(id):
+    product = Product.query.get_or_404(id)
+    
+    if request.method == 'POST':
+        product.name = request.form.get('name')
+        product.description = request.form.get('description')
+        product.price = request.form.get('price')
+        product.category_id = request.form.get('category_id')
+        product.preparation_time = request.form.get('preparation_time')
+        product.is_available = 'is_available' in request.form
+        product.track_stock = 'track_stock' in request.form
+        product.stock = request.form.get('stock', 0)
+        
+        # Manejo de nueva imagen si se sube una
+        image_file = request.files.get('image')
+        if image_file and image_file.filename != '' and allowed_file(image_file.filename):
+            import time
+            filename = secure_filename(image_file.filename)
+            file_ext = filename.rsplit('.', 1)[1].lower()
+            new_filename = f"prod_{int(time.time())}.{file_ext}"
+            file_bytes = image_file.read()
+            
+            try:
+                supabase_client.storage.from_('restaurant_assets').upload(new_filename, file_bytes)
+                public_url = supabase_client.storage.from_('restaurant_assets').get_public_url(new_filename)
+                product.image_url = public_url
+            except Exception as e:
+                flash(f'Error subiendo imagen a Supabase: {str(e)}', 'danger')
+            
+        db.session.commit()
+        
+        # (SocketIO removido)
+        
+        flash('Producto actualizado correctamente.', 'success')
+        return redirect(url_for('products.index'))
+        
+    categories = Category.query.all()
+    return render_template('products/edit.html', product=product, categories=categories)
+
+@products_bp.route('/delete/<int:id>', methods=['POST'])
+@login_required
+@role_required('admin')
+def delete(id):
+    product = Product.query.get_or_404(id)
+    try:
+        db.session.delete(product)
+        db.session.commit()
+        
+        # (SocketIO removido)
+        
+        flash('Producto eliminado correctamente.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash('No se puede eliminar el producto porque está asociado a pedidos existentes. Se recomienda desactivarlo.', 'danger')
+    return redirect(url_for('products.index'))

@@ -1,0 +1,191 @@
+{% extends 'layout.html' %}
+
+{% block title %}Historial de Turnos de Caja - RestaurantPro{% endblock %}
+{% block header_title %}Auditoría de Turnos y Cierres {% endblock %}
+
+{% block content %}
+<style>
+    /* Premium SaaS Tables */
+    .table-premium {
+        border-collapse: separate;
+        border-spacing: 0 12px;
+        margin-top: -12px;
+        width: 100%;
+    }
+
+    .table-premium thead th {
+        border: none;
+        font-weight: 800;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 1px;
+        color: #a3aed1;
+        padding: 10px 20px;
+    }
+
+    .table-premium tbody tr {
+        background-color: #fff;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.03);
+        transition: all 0.2s;
+        border-radius: 16px;
+        position: relative;
+    }
+
+    .table-premium tbody tr:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(67, 24, 255, 0.08);
+    }
+
+    .table-premium tbody td {
+        border: none;
+        padding: 18px 20px;
+        vertical-align: middle;
+        color: #2b3674;
+        font-weight: 600;
+    }
+
+    .table-premium tbody td:first-child {
+        border-top-left-radius: 16px;
+        border-bottom-left-radius: 16px;
+        border-left: 4px solid transparent;
+    }
+
+    .table-premium tbody td:last-child {
+        border-top-right-radius: 16px;
+        border-bottom-right-radius: 16px;
+        text-align: right;
+    }
+
+    .table-premium tbody tr:hover td:first-child {
+        border-left-color: #4318ff;
+    }
+</style>
+
+<div class="row mb-4 mt-2">
+    <div class="col-12">
+        <div class="card bg-white border-0 shadow-sm" style="border-radius: 20px;">
+            <div class="card-body p-4 d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="fw-bold text-dark mb-1"><i class="bi bi-shield-lock-fill me-2 text-primary"></i>Historial
+                        de Liquidación</h5>
+                    <p class="text-muted mb-0 small fw-bold">Cada fila representa el turno completo de un responsable de
+                        caja.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="table-responsive" style="overflow-x: auto;">
+    <table class="table-premium">
+        <thead>
+            <tr>
+                <th>Turno / ID</th>
+                <th>Cajero</th>
+                <th>Apertura</th>
+                <th>Cierre</th>
+                <th>Monto Físico Entregado</th>
+                <th>Descuadre Evaluado</th>
+                <th class="text-end">Ticket </th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in shifts.items %}
+            {% set disparity = 0 %}
+            {% if s.status == 'closed' %}
+            {% set disparity = (s.closing_amount|float) - (s.expected_amount|float) %}
+            {% endif %}
+            <tr>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <div class="rounded-circle shadow-sm me-3 d-flex align-items-center justify-content-center fw-bold"
+                            style="width: 40px; height: 40px; background: #e3f2fd; color: #2196f3;">
+                            #{{ (shifts.page - 1) * shifts.per_page + loop.index }}
+                        </div>
+                        {% if s.status == 'open' %}
+                        <span class="badge bg-success bg-opacity-10 text-success border border-success">En Curso</span>
+                        {% else %}
+                        <span
+                            class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary">Cerrado</span>
+                        {% endif %}
+                    </div>
+                </td>
+                <td class="fw-extrabold text-dark">{{ s.user.username }}</td>
+                <td>
+                    <div class="small fw-bold text-muted"><i class="bi bi-play-circle me-1 text-success"></i>{{
+                        s.opening_time.strftime('%d/%m/%Y') }}</div>
+                    <div class="fw-bold">{{ s.opening_time.strftime('%H:%M %p') }}</div>
+                </td>
+                <td>
+                    {% if s.closing_time %}
+                    <div class="small fw-bold text-muted"><i class="bi bi-stop-circle me-1 text-danger"></i>{{
+                        s.closing_time.strftime('%d/%m/%Y') }}</div>
+                    <div class="fw-bold">{{ s.closing_time.strftime('%H:%M %p') }}</div>
+                    {% else %}
+                    <span class="text-muted fst-italic">Aún operando...</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if s.status == 'closed' %}
+                    <span class="fs-5 fw-extrabold text-dark">S/ {{ "%.2f"|format(s.closing_amount) }}</span>
+                    <div class="small text-muted fw-bold">Esperado: S/ {{ "%.2f"|format(s.expected_amount) }}</div>
+                    {% else %}
+                    <span class="text-muted fst-italic">- - -</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if s.status == 'closed' %}
+                    {% if disparity == 0 %}
+                    <span class="badge" style="background:#e6f9f0; color:#039b73; font-size: 0.85rem;"><i
+                            class="bi bi-check-circle-fill me-1"></i> S/ 0.00 (Exacto)</span>
+                    {% elif disparity > 0 %}
+                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary px-3"
+                        style="font-size: 0.85rem;">+ S/ {{ "%.2f"|format(disparity|abs) }} (Sobrante)</span>
+                    {% else %}
+                    <span class="badge bg-danger text-white shadow-sm px-3" style="font-size: 0.85rem;">- S/ {{
+                        "%.2f"|format(disparity|abs) }} (Faltante)</span>
+                    {% endif %}
+                    {% else %}
+                    <span class="text-muted fst-italic">- - -</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if s.status == 'closed' %}
+                    <a href="{{ url_for('reports.shift_ticket', session_id=s.id) }}" target="_blank"
+                        class="btn btn-sm btn-light fw-bold text-primary shadow-sm" style="border-radius:12px;">
+                        <i class="bi bi-printer-fill me-1"></i>Ver / Imprimir
+                    </a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="7" class="text-center py-5 text-muted fw-bold opacity-50"><i
+                        class="bi bi-inbox fs-1 d-block mb-2"></i>No hay registros de caja disponibles.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Paginación -->
+{% if shifts.pages > 1 %}
+<nav aria-label="Navegación de páginas">
+    <ul class="pagination justify-content-center mt-4">
+        {% for page_num in shifts.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+        {% if page_num %}
+        {% if shifts.page == page_num %}
+        <li class="page-item active"><span class="page-link shadow-sm">{{ page_num }}</span></li>
+        {% else %}
+        <li class="page-item"><a class="page-link text-dark fw-bold"
+                href="{{ url_for('reports.shifts', page=page_num) }}">{{ page_num }}</a></li>
+        {% endif %}
+        {% else %}
+        <li class="page-item disabled"><span class="page-link text-muted">...</span></li>
+        {% endif %}
+        {% endfor %}
+    </ul>
+</nav>
+{% endif %}
+
+{% endblock %}
