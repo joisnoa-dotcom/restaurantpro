@@ -22,8 +22,7 @@ def create_app(config_class=Config):
     login_manager.login_message = 'Por favor inicie sesión.'
     login_manager.login_message_category = 'warning'
 
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-
+    # os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True) # Removido para Vercel Serverless
     # Registro de Blueprints
     from app.routes.auth import auth_bp
     from app.routes.dashboard import dashboard_bp

@@ -19,8 +19,11 @@ class Notification(db.Model):
         return cls.query.filter_by(user_id=user_id, is_read=False).count()
         
     @classmethod
-    def get_by_user(cls, user_id, limit=20):
-        return cls.query.filter_by(user_id=user_id).order_by(cls.created_at.desc()).limit(limit).all()
+    def get_by_user(cls, user_id, limit=20, unread_only=False):
+        query = cls.query.filter_by(user_id=user_id)
+        if unread_only:
+            query = query.filter_by(is_read=False)
+        return query.order_by(cls.created_at.desc()).limit(limit).all()
         
     @classmethod
     def create(cls, message, type='system', user_id=None):
