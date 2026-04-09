@@ -149,7 +149,14 @@
             <div class="card-body position-relative z-1">
                 <div class="d-flex justify-content-between align-items-start mb-4">
                     <div>
-                        <span class="badge bg-dark fs-6 px-3 shadow-sm mb-1" style="border-radius: 8px;">Mesa {{ o.table_rel.number }}</span>
+                        {% if o.table_rel %}
+                            <span class="badge bg-dark fs-6 px-3 shadow-sm mb-1" style="border-radius: 8px;">Mesa {{ o.table_rel.number }}</span>
+                        {% else %}
+                            <span class="badge fs-6 px-3 shadow-sm mb-1 text-white" style="border-radius: 8px; background-color: {% if o.order_type == 'delivery' %}#05cd99{% else %}#ffb547{% endif %};">
+                                <i class="bi {% if o.order_type == 'delivery' %}bi-motorcycle{% else %}bi-bag-check-fill{% endif %} me-1"></i>
+                                {{ 'Delivery' if o.order_type == 'delivery' else 'Para Llevar' }}
+                            </span>
+                        {% endif %}
                         <p class="text-muted small fw-bold mb-0 mt-1">#{{ o.order_number }}</p>
                     </div>
                     <div class="bg-light rounded p-2 text-center text-muted lh-1 border border-white shadow-sm">

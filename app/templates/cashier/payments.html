@@ -1,7 +1,7 @@
 {% extends 'layout.html' %}
 
 {% block title %}Cobrar Pedido - RestaurantPro{% endblock %}
-{% block header_title %}Cobrando Mesa {{ order.table_rel.number }}{% endblock %}
+{% block header_title %}Cobro de {% if order.table_rel %}Mesa {{ order.table_rel.number }}{% else %}Pedido {{ 'Delivery' if order.order_type == 'delivery' else 'Para Llevar' }}{% endif %}{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
