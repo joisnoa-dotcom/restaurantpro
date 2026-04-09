@@ -30,9 +30,9 @@
         <h4 class="fw-bold text-dark mb-1">Inventario General</h4>
         <p class="text-muted small fw-medium">Gestiona tu oferta gastronómica de forma centralizada.</p>
     </div>
-    <a href="{{ url_for('products.create') }}" class="btn btn-primary btn-lg fw-bold px-4 shadow-sm" style="border-radius: 14px; background: #4318ff; border: none;">
-        <i class="bi bi-plus-lg me-2"></i> Añadir Plata
-    </a>
+    <button type="button" class="btn btn-primary btn-lg fw-bold px-4 shadow-sm" style="border-radius: 14px; background: #4318ff; border: none;" data-bs-toggle="modal" data-bs-target="#createProductModal">
+        <i class="bi bi-plus-lg me-2"></i> Añadir Plato
+    </button>
 </div>
 
 <div class="table-responsive hide-scrollbar" style="overflow-x: auto;">
@@ -90,7 +90,7 @@
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="border-radius: 16px; border: 1px solid #f4f7fe;">
                             <li>
-                                <a class="dropdown-item fw-bold py-2 text-dark" href="{{ url_for('products.edit', id=p.id) }}">
+                                <a class="dropdown-item fw-bold py-2 text-dark" href="#" data-bs-toggle="modal" data-bs-target="#editProductModal{{ p.id }}">
                                     <i class="bi bi-pencil-square me-2 text-primary"></i> Editar Platos
                                 </a>
                             </li>
@@ -114,8 +114,135 @@
                     <p class="text-muted">Aún no has agregado ningún producto a tu restaurante.</p>
                 </td>
             </tr>
-            {% endfor %}
+{% endfor %}
         </tbody>
     </table>
 </div>
+
+<!-- Modal Crear Producto -->
+<div class="modal fade" id="createProductModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" style="border-radius: 20px; border: none;">
+            <div class="modal-header border-0 p-4">
+                <h5 class="modal-title fw-bold">Añadir Nuevo Plato</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 pt-0">
+                <form action="{{ url_for('products.create') }}" method="POST" enctype="multipart/form-data">
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label class="form-label fw-bold">Nombre del Producto</label>
+                            <input type="text" class="form-control" name="name" required style="border-radius: 10px;">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Precio (S/)</label>
+                            <input type="number" step="0.01" class="form-control" name="price" required style="border-radius: 10px;">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Categoría</label>
+                            <select class="form-select" name="category_id" required style="border-radius: 10px;">
+                                <option value="">Seleccione...</option>
+                                {% for c in categories %}
+                                    <option value="{{ c.id }}">{{ c.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold">Prep. (Min)</label>
+                            <input type="number" class="form-control" name="preparation_time" value="15" required style="border-radius: 10px;">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold">Stock Inicial</label>
+                            <input type="number" class="form-control" name="stock" value="0" min="0" style="border-radius: 10px;">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Descripción</label>
+                            <textarea class="form-control" name="description" rows="2" style="border-radius: 10px;"></textarea>
+                        </div>
+                        <div class="col-md-9">
+                            <label class="form-label fw-bold">Imagen</label>
+                            <input type="file" class="form-control" name="image" accept="image/*" style="border-radius: 10px;">
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end pb-1">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="track_stock" id="trackStockCreate">
+                                <label class="form-check-label fw-bold small" for="trackStockCreate">Control Stock</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <button type="button" class="btn btn-light fw-bold" data-bs-dismiss="modal" style="border-radius: 10px;">Cancelar</button>
+                        <button type="submit" class="btn btn-primary fw-bold px-4" style="border-radius: 10px; background: #4318ff; border: none;">Guardar Producto</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modales Editar Producto -->
+{% for p in products %}
+<div class="modal fade" id="editProductModal{{ p.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" style="border-radius: 20px; border: none;">
+            <div class="modal-header border-0 p-4">
+                <h5 class="modal-title fw-bold">Editar {{ p.name }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 pt-0">
+                <form action="{{ url_for('products.edit', id=p.id) }}" method="POST" enctype="multipart/form-data">
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label class="form-label fw-bold">Nombre del Producto</label>
+                            <input type="text" class="form-control" name="name" value="{{ p.name }}" required style="border-radius: 10px;">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Precio (S/)</label>
+                            <input type="number" step="0.01" class="form-control" name="price" value="{{ p.price }}" required style="border-radius: 10px;">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Categoría</label>
+                            <select class="form-select" name="category_id" required style="border-radius: 10px;">
+                                {% for c in categories %}
+                                    <option value="{{ c.id }}" {% if c.id == p.category_id %}selected{% endif %}>{{ c.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold">Prep. (Min)</label>
+                            <input type="number" class="form-control" name="preparation_time" value="{{ p.preparation_time }}" required style="border-radius: 10px;">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold">Stock</label>
+                            <input type="number" class="form-control" name="stock" value="{{ p.stock }}" min="0" style="border-radius: 10px;">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Descripción</label>
+                            <textarea class="form-control" name="description" rows="2" style="border-radius: 10px;">{{ p.description }}</textarea>
+                        </div>
+                        <div class="col-md-7">
+                            <label class="form-label fw-bold">Cambiar Imagen</label>
+                            <input type="file" class="form-control" name="image" accept="image/*" style="border-radius: 10px;">
+                        </div>
+                        <div class="col-md-5 d-flex align-items-end justify-content-between pb-1">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="track_stock" id="trackStockEdit{{ p.id }}" {% if p.track_stock %}checked{% endif %}>
+                                <label class="form-check-label fw-bold small" for="trackStockEdit{{ p.id }}">Control Stock</label>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="is_available" id="isAvailableEdit{{ p.id }}" {% if p.is_available %}checked{% endif %}>
+                                <label class="form-check-label fw-bold small text-success" for="isAvailableEdit{{ p.id }}">Disponible</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <button type="button" class="btn btn-light fw-bold" data-bs-dismiss="modal" style="border-radius: 10px;">Cancelar</button>
+                        <button type="submit" class="btn btn-primary fw-bold px-4" style="border-radius: 10px; background: #4318ff; border: none;">Actualizar Plato</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
 {% endblock %}
