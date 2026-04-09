@@ -4,6 +4,7 @@ from flask_login import login_required
 from app.models.table import Table
 from app import db
 from app.utils.decorators import role_required
+from app.utils.formatters import safe_int
 
 tables_bp = Blueprint('tables', __name__, url_prefix='/tables')
 
@@ -24,8 +25,8 @@ def monitor():
 @login_required
 @role_required('admin')
 def create():
-    number = request.form.get('number')
-    capacity = request.form.get('capacity')
+    number = safe_int(request.form.get('number'), default=1)
+    capacity = safe_int(request.form.get('capacity'), default=4)
     location = request.form.get('location')
     
     existing_table = Table.query.filter_by(number=number).first()
@@ -49,14 +50,14 @@ def create():
 @role_required('admin')
 def edit(id):
     table = Table.query.get_or_404(id)
-    new_number = request.form.get('number')
+    new_number = safe_int(request.form.get('number'), default=table.number)
     existing = Table.query.filter(Table.number == new_number, Table.id != id).first()
     
     if existing:
         flash(f'El número de mesa {new_number} ya está en uso.', 'danger')
     else:
         table.number = new_number
-        table.capacity = request.form.get('capacity')
+        table.capacity = safe_int(request.form.get('capacity'), default=4)
         table.location = request.form.get('location')
         table.status = request.form.get('status')
         

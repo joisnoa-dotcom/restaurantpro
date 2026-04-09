@@ -9,6 +9,7 @@ from app.models.cash_register import CashSession
 from app.models.audit_log import AuditLog
 from datetime import datetime
 from app import db
+from app.utils.formatters import safe_float
 import random
 
 cashier_bp = Blueprint('cashier', __name__, url_prefix='/cashier')
@@ -30,7 +31,7 @@ def open_session():
         flash('Ya existe una caja abierta.', 'warning')
         return redirect(url_for('cashier.pos'))
         
-    opening_amount = request.form.get('opening_amount', 0)
+    opening_amount = safe_float(request.form.get('opening_amount'), default=0.0)
     
     new_session = CashSession(
         user_id=current_user.id,
@@ -65,7 +66,7 @@ def close_session():
     total_expenses = sum(float(e.amount) for e in expenses)
     expected_amount = float(current_session.opening_amount) + cash_sales - total_expenses
     
-    closing_amount = request.form.get('closing_amount', expected_amount)
+    closing_amount = safe_float(request.form.get('closing_amount'), default=expected_amount)
     
     current_session.closing_time = datetime.utcnow()
     current_session.closing_amount = closing_amount
@@ -88,7 +89,7 @@ def add_expense():
         flash('No hay ninguna caja abierta para registrar egresos.', 'danger')
         return redirect(url_for('cashier.pos'))
         
-    amount = request.form.get('amount')
+    amount = safe_float(request.form.get('amount'), default=0.0)
     reason = request.form.get('reason')
     
     try:
@@ -144,7 +145,7 @@ def pay(order_id):
         flash('Seguridad: Esta orden ya fue cobrada previamente.', 'warning')
         return redirect(url_for('cashier.pos'))
     
-    amount = request.form.get('amount')
+    amount = safe_float(request.form.get('amount'), default=0.0)
     payment_method = request.form.get('payment_method')
     reference_code = request.form.get('reference_code', '')
     invoice_type = request.form.get('invoice_type')

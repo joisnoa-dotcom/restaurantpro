@@ -7,6 +7,7 @@ from app.models.product import Product
 from app.models.category import Category
 from app import db
 from app.utils.supabase_client import supabase_client
+from app.utils.formatters import safe_int, safe_float
 
 products_bp = Blueprint('products', __name__, url_prefix='/products')
 
@@ -31,11 +32,11 @@ def create():
     if request.method == 'POST':
         name = request.form.get('name')
         description = request.form.get('description')
-        price = request.form.get('price')
-        category_id = request.form.get('category_id')
-        preparation_time = request.form.get('preparation_time')
+        price = safe_float(request.form.get('price'), default=0.0)
+        category_id = safe_int(request.form.get('category_id'), nullable=True)
+        preparation_time = safe_int(request.form.get('preparation_time'), default=0)
         track_stock = 'track_stock' in request.form
-        stock = request.form.get('stock', 0)
+        stock = safe_int(request.form.get('stock', 0), default=0)
         
         # Manejo de la imagen
         image_file = request.files.get('image')
@@ -87,12 +88,12 @@ def edit(id):
     if request.method == 'POST':
         product.name = request.form.get('name')
         product.description = request.form.get('description')
-        product.price = request.form.get('price')
-        product.category_id = request.form.get('category_id')
-        product.preparation_time = request.form.get('preparation_time')
+        product.price = safe_float(request.form.get('price'), default=0.0)
+        product.category_id = safe_int(request.form.get('category_id'), nullable=True)
+        product.preparation_time = safe_int(request.form.get('preparation_time'), default=0)
         product.is_available = 'is_available' in request.form
         product.track_stock = 'track_stock' in request.form
-        product.stock = request.form.get('stock', 0)
+        product.stock = safe_int(request.form.get('stock', 0), default=0)
         
         # Manejo de nueva imagen si se sube una
         image_file = request.files.get('image')

@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from app.utils.decorators import role_required
 from app.models.order import Order, OrderItem
 from app.models.table import Table
+from app.utils.formatters import safe_int, safe_float
 from app.models.product import Product
 from app.models.category import Category
 from app.models.notification import Notification 
@@ -53,12 +54,7 @@ def create_external():
     customer_name = request.form.get('customer_name', '')
     customer_phone = request.form.get('customer_phone', '')
     delivery_address = request.form.get('delivery_address', '')
-    delivery_fee = request.form.get('delivery_fee', 0)
-    
-    try:
-        delivery_fee = float(delivery_fee)
-    except (ValueError, TypeError):
-        delivery_fee = 0.00
+    delivery_fee = safe_float(request.form.get('delivery_fee'), default=0.0)
         
     new_order = Order(
         table_id=None,
@@ -105,8 +101,8 @@ def add_item(id):
         flash('Seguridad: No se pueden añadir platos a una orden cerrada o anulada.', 'danger')
         return redirect(url_for('orders.details', id=order.id))
         
-    product_id = request.form.get('product_id')
-    quantity = int(request.form.get('quantity', 1))
+    product_id = safe_int(request.form.get('product_id'))
+    quantity = safe_int(request.form.get('quantity'), default=1)
     notes = request.form.get('notes', '')
 
     product = Product.query.get_or_404(product_id)
