@@ -72,7 +72,7 @@
                 </td>
                 <td>
                     <div class="d-flex align-items-center">
-                        <i class="bi bi-person-badge text-primary me-2"></i> {{ o.waiter.full_name }}
+                        <i class="bi bi-person-badge text-primary me-2"></i> {{ o.waiter.full_name if o.waiter else 'Sistema' }}
                     </div>
                 </td>
                 <td class="fs-5 fw-extrabold text-success">

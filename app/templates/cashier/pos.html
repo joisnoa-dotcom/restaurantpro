@@ -173,7 +173,7 @@
                     </div>
                     <div class="lh-sm">
                         <span class="d-block text-uppercase" style="font-size: 0.65rem; font-weight: 800; letter-spacing: 1px;">Atendido por</span>
-                        <span class="fw-bold text-dark fs-6">{{ o.waiter.full_name }}</span>
+                        <span class="fw-bold text-dark fs-6">{{ o.waiter.full_name if o.waiter else 'Sistema' }}</span>
                     </div>
                 </div>
             </div>

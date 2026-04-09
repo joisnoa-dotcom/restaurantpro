@@ -6,6 +6,7 @@ class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     table_id = db.Column(db.Integer, db.ForeignKey('tables.id'), nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    waiter = db.relationship('User', backref='orders', lazy=True)
     order_type = db.Column(db.String(50), default='dine_in')
     customer_name = db.Column(db.String(100))
     customer_phone = db.Column(db.String(50))
