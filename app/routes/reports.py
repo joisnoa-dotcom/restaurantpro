@@ -160,10 +160,6 @@ def products():
 @role_required('admin')
 def shifts():
     from app.models.cash_register import CashSession
-    if current_user.role != 'admin':
-        flash('Acceso denegado. Solo administradores pueden ver el historial de cajas.', 'danger')
-        return redirect(url_for('dashboard.index'))
-        
     page = request.args.get('page', 1, type=int)
     shifts = CashSession.query.order_by(CashSession.opening_time.desc()).paginate(page=page, per_page=15)
     return render_template('reports/shifts.html', shifts=shifts)

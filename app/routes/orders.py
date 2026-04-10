@@ -43,7 +43,7 @@ def create(table_id):
     table.status = 'occupied'
     db.session.add(new_order)
     db.session.commit()
-    # (Supabase Realtime)
+
     flash(f'Pedido {new_order.order_number} iniciado para la Mesa {table.number}.', 'success')
     return redirect(url_for('orders.details', id=new_order.id))
 
@@ -71,7 +71,6 @@ def create_external():
     
     db.session.add(new_order)
     db.session.commit()
-    # (Supabase Realtime)
     
     tipo_str = "Delivery" if order_type == 'delivery' else "Para Llevar"
     flash(f'Pedido {new_order.order_number} ({tipo_str}) iniciado para {customer_name}.', 'success')
@@ -87,12 +86,11 @@ def details(id):
     cancel_log = None
     if order.status == 'cancelled':
         from app.models.audit_log import AuditLog
-        cancel_log = AuditLog.query.filter_by(action='CANCEL_ORDER', table_affected='orders', record_id=order.id).order_by(AuditLog.created_at.desc()).first()
+        cancel_log = AuditLog.query.filter_by(action='CANCEL_ORDER', entity_type='orders', entity_id=order.id).order_by(AuditLog.created_at.desc()).first()
 
     return render_template('orders/details.html', order=order, products=products, categories=categories, cancel_log=cancel_log)
 
 @orders_bp.route('/<int:id>/add_item', methods=['POST'])
-@login_required
 @login_required
 def add_item(id):
     order = Order.query.get_or_404(id)
@@ -119,7 +117,6 @@ def add_item(id):
     order.total_amount = float(order.total_amount) + float(subtotal)
     db.session.add(item)
     db.session.commit()
-    # (Supabase Realtime)
     return redirect(url_for('orders.details', id=order.id))
 
 @orders_bp.route('/remove_item/<int:item_id>', methods=['POST'])
@@ -130,10 +127,6 @@ def remove_item(item_id):
     
     if order.status in ['paid', 'cancelled']:
         flash('Seguridad: No se pueden eliminar platos de una orden cerrada o anulada.', 'danger')
-        return redirect(url_for('orders.details', id=order.id))
-    
-    if order.status == 'paid':
-        flash('No se pueden eliminar ítems de una orden ya pagada.', 'danger')
         return redirect(url_for('orders.details', id=order.id))
         
     if item.status == 'delivered':
@@ -155,7 +148,7 @@ def remove_item(item_id):
     AuditLog.log('REMOVE_ITEM', 'order_items', order.id, f"Se eliminó {item.quantity}x {item.product.name} de la orden {order.order_number}", current_user.id)
     
     db.session.commit()
-    # (Supabase Realtime)
+
     flash(f'{item.product.name} eliminado de la orden correctamente.', 'success')
     return redirect(url_for('orders.details', id=order.id))
 
@@ -182,9 +175,9 @@ def update_item_status(item_id):
         mensaje = f"¡El plato {dish_name} de la Mesa {table_num} está listo!"
         Notification.create(type='system', message=mensaje, user_id=None)
         
-        # socketio.emit('plato_listo', {'mesa': table_num, 'plato': dish_name})
+
     
-    # (Supabase Realtime)
+
     return redirect(url_for('orders.kitchen'))
 
 @orders_bp.route('/cancel/<int:id>', methods=['POST'])
@@ -208,7 +201,7 @@ def cancel(id):
         if table: table.status = 'free'
         db.session.delete(order)
         db.session.commit()
-        # (Supabase Realtime)
+
         flash('Pedido cancelado por error de apertura.', 'success')
     else:
         order.status = 'cancelled'
@@ -222,7 +215,7 @@ def cancel(id):
         AuditLog.log('CANCEL_ORDER', 'orders', order.id, f"Pedido {order.order_number} anulado. Monto: {order.total_amount}. Motivo: {cancel_reason}", current_user.id)
         
         db.session.commit()
-        # (Supabase Realtime)
+
         flash('Pedido anulado y mesa liberada.', 'warning')
     return redirect(url_for('tables.monitor'))
 

@@ -4,7 +4,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required
 from app.models.setting import Setting
 from app import db
-from app.utils.supabase_client import supabase_client
+from app.utils.supabase_client import get_supabase
 from app.utils.decorators import role_required
 
 settings_bp = Blueprint('settings', __name__, url_prefix='/settings')
@@ -48,8 +48,8 @@ def index():
                 file_bytes = file.read()
                 
                 try:
-                    res = supabase_client.storage.from_('restaurant_assets').upload(new_filename, file_bytes)
-                    public_url = supabase_client.storage.from_('restaurant_assets').get_public_url(new_filename)
+                    res = get_supabase().storage.from_('restaurant_assets').upload(new_filename, file_bytes)
+                    public_url = get_supabase().storage.from_('restaurant_assets').get_public_url(new_filename)
                     setting.logo_url = public_url
                 except Exception as e:
                     flash(f'Error subiendo imagen a Supabase: {str(e)}', 'danger')

@@ -162,7 +162,14 @@ def pay(order_id):
         db.session.flush() 
         
         prefix = 'B001' if invoice_type == 'boleta' else 'F001'
-        doc_number = f"{prefix}-{random.randint(100000, 999999)}"
+        last_invoice = Invoice.query.filter(Invoice.document_number.like(f"{prefix}-%")).order_by(Invoice.id.desc()).first()
+        next_num = 1
+        if last_invoice:
+            try:
+                next_num = int(last_invoice.document_number.split('-')[1]) + 1
+            except (ValueError, IndexError):
+                next_num = random.randint(100000, 999999)
+        doc_number = f"{prefix}-{next_num:06d}"
         
         total = float(amount)
         subtotal = total / 1.18

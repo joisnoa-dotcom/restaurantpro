@@ -6,7 +6,7 @@ from werkzeug.utils import secure_filename
 from app.models.product import Product
 from app.models.category import Category
 from app import db
-from app.utils.supabase_client import supabase_client
+from app.utils.supabase_client import get_supabase
 from app.utils.formatters import safe_int, safe_float
 
 products_bp = Blueprint('products', __name__, url_prefix='/products')
@@ -51,9 +51,9 @@ def create():
             file_bytes = image_file.read()
             
             try:
-                supabase_client.storage.from_('restaurant_assets').upload(new_filename, file_bytes)
-                public_url = supabase_client.storage.from_('restaurant_assets').get_public_url(new_filename)
-                filename = public_url # Guardaremos la URL entera en la db
+                get_supabase().storage.from_('restaurant_assets').upload(new_filename, file_bytes)
+                public_url = get_supabase().storage.from_('restaurant_assets').get_public_url(new_filename)
+                filename = public_url
             except Exception as e:
                 flash(f'Error subiendo imagen a Supabase: {str(e)}', 'danger')
                 filename = None
@@ -69,10 +69,13 @@ def create():
             image_url=filename
         )
         
-        db.session.add(new_product)
-        db.session.commit()
-        
-        # (SocketIO removido - Se usaría Supabase Realtime via Postgres)
+        try:
+            db.session.add(new_product)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            flash('Error al crear el producto. Intenta nuevamente.', 'danger')
+            return redirect(url_for('products.index'))
         
         flash('Producto agregado correctamente.', 'success')
         return redirect(url_for('products.index'))
@@ -106,15 +109,13 @@ def edit(id):
             file_bytes = image_file.read()
             
             try:
-                supabase_client.storage.from_('restaurant_assets').upload(new_filename, file_bytes)
-                public_url = supabase_client.storage.from_('restaurant_assets').get_public_url(new_filename)
+                get_supabase().storage.from_('restaurant_assets').upload(new_filename, file_bytes)
+                public_url = get_supabase().storage.from_('restaurant_assets').get_public_url(new_filename)
                 product.image_url = public_url
             except Exception as e:
                 flash(f'Error subiendo imagen a Supabase: {str(e)}', 'danger')
             
         db.session.commit()
-        
-        # (SocketIO removido)
         
         flash('Producto actualizado correctamente.', 'success')
         return redirect(url_for('products.index'))
@@ -130,8 +131,6 @@ def delete(id):
     try:
         db.session.delete(product)
         db.session.commit()
-        
-        # (SocketIO removido)
         
         flash('Producto eliminado correctamente.', 'success')
     except Exception as e:

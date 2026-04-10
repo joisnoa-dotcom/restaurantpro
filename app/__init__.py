@@ -1,5 +1,6 @@
 import os
-from flask import Flask, send_from_directory
+from flask import Flask, send_from_directory, url_for
+import logging
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_bcrypt import Bcrypt
@@ -63,7 +64,7 @@ def create_app(config_class=Config):
                 unread_list = Notification.get_by_user(current_user.id, unread_only=True, limit=5)
                 return dict(unread_count=unread_count, unread_notifications=unread_list, supabase_url=supa_url, supabase_key=supa_key)
             except Exception as e:
-                pass
+                logging.getLogger(__name__).warning(f"Error cargando notificaciones: {e}")
         return dict(unread_count=0, unread_notifications=[], supabase_url=supa_url, supabase_key=supa_key)
 
     @app.context_processor
@@ -85,10 +86,13 @@ def create_app(config_class=Config):
     
     @app.template_filter('resolve_url')
     def resolve_url(path, folder='uploads/products/'):
+        """Resuelve la URL de una imagen. Con Supabase Storage, las URLs ya son absolutas."""
         if not path:
             return ""
+        # Todas las imágenes en Supabase Storage ya son URLs completas
         if path.startswith('http://') or path.startswith('https://'):
             return path
+        # Fallback por compatibilidad con datos antiguos que puedan existir
         return url_for('static', filename=folder + path)
 
     return app

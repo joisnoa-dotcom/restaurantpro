@@ -34,6 +34,5 @@ class Config:
     SUPABASE_URL = os.environ.get("SUPABASE_URL")
     SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
     
-    # Configuración original (para compatibilidad de migraciones si la usas local)
-    UPLOAD_FOLDER = os.path.join('app', 'static', 'uploads', 'products')
-    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # Límite de 16 MB para subidas
+    # Límite de subida de archivos (16 MB)
+    MAX_CONTENT_LENGTH = 16 * 1024 * 1024

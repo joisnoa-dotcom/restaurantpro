@@ -1,5 +1,6 @@
 from app import db
 from datetime import datetime
+from sqlalchemy import or_
 
 class Notification(db.Model):
     __tablename__ = 'notifications'
@@ -16,11 +17,16 @@ class Notification(db.Model):
         
     @classmethod
     def get_unread_count(cls, user_id):
-        return cls.query.filter_by(user_id=user_id, is_read=False).count()
+        """Cuenta notificaciones no leídas: las del usuario + las globales (user_id=None)."""
+        return cls.query.filter(
+            or_(cls.user_id == user_id, cls.user_id.is_(None)),
+            cls.is_read == False
+        ).count()
         
     @classmethod
     def get_by_user(cls, user_id, limit=20, unread_only=False):
-        query = cls.query.filter_by(user_id=user_id)
+        """Obtiene notificaciones del usuario + las globales (user_id=None)."""
+        query = cls.query.filter(or_(cls.user_id == user_id, cls.user_id.is_(None)))
         if unread_only:
             query = query.filter_by(is_read=False)
         return query.order_by(cls.created_at.desc()).limit(limit).all()
