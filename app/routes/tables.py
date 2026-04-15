@@ -87,9 +87,8 @@ def delete(id):
         
     return redirect(url_for('tables.index'))
 
-# NUEVO: Ruta de atajo para abrir la Carta de una Mesa y probarla
+# Ruta de atajo para abrir la Carta de una Mesa y probarla (pública)
 @tables_bp.route('/qr/<int:id>')
-@login_required
 def view_qr_link(id):
     table = Table.query.get_or_404(id)
     if not table.qr_code:

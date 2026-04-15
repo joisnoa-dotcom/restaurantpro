@@ -1,5 +1,7 @@
 from app import db
-from datetime import datetime
+from datetime import datetime, timezone
+
+_now_utc = lambda: datetime.now(timezone.utc)
 
 class Payment(db.Model):
     __tablename__ = 'payments'
@@ -11,7 +13,7 @@ class Payment(db.Model):
     status = db.Column(db.String(50), default='pending')
     created_by = db.Column(db.Integer, db.ForeignKey('users.id'))
     cash_session_id = db.Column(db.Integer, db.ForeignKey('cash_sessions.id'), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime(timezone=True), default=_now_utc)
     
     order = db.relationship('Order', backref=db.backref('payment_info', uselist=False))
     invoice = db.relationship('Invoice', backref=db.backref('payment_rel', lazy=True, uselist=False))
@@ -29,4 +31,4 @@ class Invoice(db.Model):
     tax_amount = db.Column(db.Numeric(10, 2))
     total_amount = db.Column(db.Numeric(10, 2))
     pdf_path = db.Column(db.String(255))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime(timezone=True), default=_now_utc)

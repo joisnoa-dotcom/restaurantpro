@@ -162,13 +162,7 @@
                         </li>
                         {% endif %}
 
-                        {% if current_user.role == 'chef' %}
-                        <li class="nav-item">
-                            <a href="{{ url_for('orders.kitchen') }}" class="sidebar-link link-highlight-kitchen">
-                                <i class="bi bi-fire me-2"></i> Pantalla de Cocina
-                            </a>
-                        </li>
-                        {% endif %}
+
                         
                         {% if current_user.role in ['admin', 'cashier'] %}
                         <li class="nav-item">
@@ -317,11 +311,7 @@
                 });
             });
 
-            if ('serviceWorker' in navigator) {
-                window.addEventListener('load', () => {
-                    navigator.serviceWorker.register('/sw.js').catch(err => console.log('Error PWA:', err));
-                });
-            }
+
 
             // CONFIGURACIÓN DE SUPABASE REALTIME
             const supabaseUrl = "{{ supabase_url }}";

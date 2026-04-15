@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, abort
 from flask_login import login_required, current_user
 from app.utils.decorators import role_required
 from app.models.order import Order, OrderItem
@@ -6,17 +6,27 @@ from app.models.table import Table
 from app.utils.formatters import safe_int, safe_float
 from app.models.product import Product
 from app.models.category import Category
-from app.models.notification import Notification 
+from app.models.notification import Notification
+from app.models.audit_log import AuditLog
 from app import db
-import random
-import string
-from datetime import datetime
+import logging
+from datetime import datetime, timezone
+
+logger = logging.getLogger(__name__)
 
 orders_bp = Blueprint('orders', __name__, url_prefix='/orders')
 
 def generate_order_number():
-    chars = string.ascii_uppercase + string.digits
-    return 'ORD-' + ''.join(random.choices(chars, k=5))
+    """Genera un número de pedido único basado en secuencia de BD."""
+    try:
+        seq = db.session.execute(db.text("SELECT nextval('order_number_seq')")).scalar()
+        date_part = datetime.now(timezone.utc).strftime('%Y%m%d')
+        return f'ORD-{date_part}-{seq:04d}'
+    except Exception:
+        # Fallback si la secuencia no existe aún
+        import random, string
+        chars = string.ascii_uppercase + string.digits
+        return 'ORD-' + ''.join(random.choices(chars, k=6))
 
 @orders_bp.route('/')
 @login_required
@@ -103,7 +113,10 @@ def add_item(id):
     quantity = safe_int(request.form.get('quantity'), default=1)
     notes = request.form.get('notes', '')
 
-    product = Product.query.get_or_404(product_id)
+    # Bloqueo pesimista para evitar race condition en stock
+    product = db.session.query(Product).with_for_update().get(product_id)
+    if not product:
+        abort(404)
     
     if product.track_stock:
         if product.stock < quantity:
@@ -144,7 +157,6 @@ def remove_item(item_id):
         
     db.session.delete(item)
     
-    from app.models.audit_log import AuditLog
     AuditLog.log('REMOVE_ITEM', 'order_items', order.id, f"Se eliminó {item.quantity}x {item.product.name} de la orden {order.order_number}", current_user.id)
     
     db.session.commit()
@@ -199,7 +211,7 @@ def cancel(id):
 
     if order.total_amount == 0:
         if table: table.status = 'free'
-        db.session.delete(order)
+        order.status = 'cancelled'  # Soft-delete: no eliminar datos financieros
         db.session.commit()
 
         flash('Pedido cancelado por error de apertura.', 'success')
@@ -211,7 +223,6 @@ def cancel(id):
                 item.product.stock += item.quantity
         if table: table.status = 'free'
         
-        from app.models.audit_log import AuditLog
         AuditLog.log('CANCEL_ORDER', 'orders', order.id, f"Pedido {order.order_number} anulado. Monto: {order.total_amount}. Motivo: {cancel_reason}", current_user.id)
         
         db.session.commit()

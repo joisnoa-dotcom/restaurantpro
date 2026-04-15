@@ -1,5 +1,5 @@
 from app import db
-from datetime import datetime
+from datetime import datetime, timezone
 
 class AuditLog(db.Model):
     __tablename__ = 'audit_logs'
@@ -10,7 +10,7 @@ class AuditLog(db.Model):
     entity_id = db.Column(db.Integer)
     details = db.Column(db.Text)
     ip_address = db.Column(db.String(50))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     @staticmethod
     def log(action, entity_type=None, entity_id=None, details=None, user_id=None):

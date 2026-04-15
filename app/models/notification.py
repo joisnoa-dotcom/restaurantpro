@@ -1,6 +1,8 @@
 from app import db
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import or_
+
+_now_utc = lambda: datetime.now(timezone.utc)
 
 class Notification(db.Model):
     __tablename__ = 'notifications'
@@ -9,7 +11,7 @@ class Notification(db.Model):
     type = db.Column(db.String(50), default='system')
     message = db.Column(db.Text, nullable=False)
     is_read = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime(timezone=True), default=_now_utc)
     
     @property
     def time(self):

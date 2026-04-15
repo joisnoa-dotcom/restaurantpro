@@ -1,5 +1,5 @@
 from app import db
-from datetime import datetime
+from datetime import datetime, timezone
 
 class CashExpense(db.Model):
     __tablename__ = 'cash_expenses'
@@ -8,4 +8,4 @@ class CashExpense(db.Model):
     cash_session_id = db.Column(db.Integer, db.ForeignKey('cash_sessions.id'))
     amount = db.Column(db.Numeric(10, 2), nullable=False)
     reason = db.Column(db.String(255), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))

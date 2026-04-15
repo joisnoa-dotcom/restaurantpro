@@ -7,7 +7,9 @@ load_dotenv(os.path.join(basedir, '.env'), override=True)
 
 class Config:
     # Clave secreta para proteger formularios y sesiones
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-key-por-defecto'
+    SECRET_KEY = os.environ.get('SECRET_KEY')
+    if not SECRET_KEY:
+        raise ValueError("FALTA SECRET_KEY en variables de entorno. Genera una con: python -c \"import secrets; print(secrets.token_hex(32))\"")
     
     # Configuración de sesiones para Vercel Serverless
     # remember=True en login_user() usa cookies persistentes que sobreviven cold starts
@@ -31,10 +33,13 @@ class Config:
             
     import ssl
     ssl_ctx = ssl.create_default_context()
-    ssl_ctx.check_hostname = False
-    ssl_ctx.verify_mode = ssl.CERT_NONE
+    # SSL con verificación completa (Supabase usa certificados Let's Encrypt válidos)
 
     SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_size": 1,
+        "max_overflow": 2,
+        "pool_recycle": 280,
+        "pool_pre_ping": True,
         "connect_args": {
             "ssl_context": ssl_ctx
         }

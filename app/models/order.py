@@ -1,5 +1,7 @@
 from app import db
-from datetime import datetime
+from datetime import datetime, timezone
+
+_now_utc = lambda: datetime.now(timezone.utc)
 
 class Order(db.Model):
     __tablename__ = 'orders'
@@ -16,8 +18,8 @@ class Order(db.Model):
     status = db.Column(db.String(50), default='pending')
     total_amount = db.Column(db.Numeric(10, 2), default=0.0)
     notes = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime(timezone=True), default=_now_utc)
+    updated_at = db.Column(db.DateTime(timezone=True), default=_now_utc, onupdate=_now_utc)
     
     items = db.relationship('OrderItem', backref='order_rel', cascade='all, delete-orphan', lazy=True)
 
@@ -31,7 +33,7 @@ class OrderItem(db.Model):
     subtotal = db.Column(db.Numeric(10, 2))
     status = db.Column(db.String(50), default='pending')
     notes = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime(timezone=True), default=_now_utc)
 
     @property
     def kitchen_verb(self):

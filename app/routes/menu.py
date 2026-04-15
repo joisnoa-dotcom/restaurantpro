@@ -1,12 +1,13 @@
-from flask import Blueprint, render_template, request, jsonify
+from flask import Blueprint, render_template, request, jsonify, session
 from app.models.table import Table
 from app.models.product import Product
 from app.models.category import Category
 from app.models.order import Order, OrderItem
 from app.models.notification import Notification
-from app import db
+from app import db, csrf
 import random
 import string
+import time
 
 menu_bp = Blueprint('menu', __name__, url_prefix='/menu')
 
@@ -21,14 +22,31 @@ def view_menu(qr_code):
     return render_template('carta-digital.html', table=table, categories=categories, products=products)
 
 # 2. RUTA PARA RECIBIR EL PEDIDO DESDE EL CELULAR DEL CLIENTE
+@csrf.exempt  # API JSON pública, no usa sesiones de Flask
 @menu_bp.route('/<qr_code>/order', methods=['POST'])
 def place_order(qr_code):
+    # Rate limiting básico por IP (máx 5 pedidos por minuto)
+    client_ip = request.remote_addr or 'unknown'
+    rate_key = f'menu_rate_{client_ip}'
+    now = time.time()
+    recent_orders = session.get(rate_key, [])
+    recent_orders = [t for t in recent_orders if now - t < 60]  # Último minuto
+    if len(recent_orders) >= 5:
+        return jsonify({'error': 'Demasiados pedidos. Espera un momento.'}), 429
+    
     table = Table.query.filter_by(qr_code=qr_code).first_or_404()
     data = request.json
+    
+    if not data or not isinstance(data, dict):
+        return jsonify({'error': 'Datos inválidos'}), 400
+        
     cart = data.get('cart', [])
 
-    if not cart:
+    if not cart or not isinstance(cart, list):
         return jsonify({'error': 'El carrito está vacío'}), 400
+    
+    if len(cart) > 30:
+        return jsonify({'error': 'Demasiados items en el pedido'}), 400
 
     # Verificamos si la mesa ya tiene una cuenta abierta para sumarle los platos, o si creamos una nueva
     active_order = Order.query.filter_by(table_id=table.id).filter(Order.status.in_(['pending', 'preparing', 'ready', 'served'])).first()
@@ -48,22 +66,42 @@ def place_order(qr_code):
         db.session.flush()
 
     total_added = 0
+    items_added = 0
     for item in cart:
+        # Validación estricta de cada item
+        if not isinstance(item.get('id'), int) or not isinstance(item.get('cantidad'), int):
+            continue
+        if item['cantidad'] < 1 or item['cantidad'] > 50:
+            continue
+            
         product = Product.query.get(item['id'])
-        if product:
-            qty = item['cantidad']
-            subtotal = float(product.price) * qty
-            total_added += subtotal
-            new_item = OrderItem(
-                order_id=active_order.id,
-                product_id=product.id,
-                quantity=qty,
-                unit_price=product.price,
-                subtotal=subtotal,
-                status='pending',
-                notes=item.get('notas', '')
-            )
-            db.session.add(new_item)
+        if not product or not product.is_available:
+            continue
+            
+        qty = item['cantidad']
+        
+        # Validar stock si se trackea
+        if product.track_stock and product.stock < qty:
+            continue
+        if product.track_stock:
+            product.stock -= qty
+            
+        subtotal = float(product.price) * qty
+        total_added += subtotal
+        items_added += 1
+        new_item = OrderItem(
+            order_id=active_order.id,
+            product_id=product.id,
+            quantity=qty,
+            unit_price=product.price,
+            subtotal=subtotal,
+            status='pending',
+            notes=str(item.get('notas', ''))[:200]  # Limitar notas a 200 chars
+        )
+        db.session.add(new_item)
+    
+    if items_added == 0:
+        return jsonify({'error': 'No se pudo agregar ningún producto válido'}), 400
 
     active_order.total_amount = float(active_order.total_amount) + total_added
 
@@ -76,6 +114,8 @@ def place_order(qr_code):
 
     db.session.commit()
     
-    # (Supabase Realtime)
+    # Registrar para rate limiting
+    recent_orders.append(now)
+    session[rate_key] = recent_orders
 
     return jsonify({'success': True, 'message': 'Pedido enviado a cocina'})

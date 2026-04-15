@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, abort
 from flask_login import login_required, current_user
 from app.utils.decorators import role_required
 from app.models.order import Order
@@ -6,11 +6,14 @@ from app.models.table import Table
 from app.models.payment import Payment, Invoice
 from app.models.notification import Notification 
 from app.models.cash_register import CashSession
+from app.models.cash_expense import CashExpense
 from app.models.audit_log import AuditLog
-from datetime import datetime
+from datetime import datetime, timezone
 from app import db
 from app.utils.formatters import safe_float
-import random
+import logging
+
+logger = logging.getLogger(__name__)
 
 cashier_bp = Blueprint('cashier', __name__, url_prefix='/cashier')
 
@@ -41,7 +44,6 @@ def open_session():
     db.session.add(new_session)
     db.session.flush()
     
-    from app.models.audit_log import AuditLog
     AuditLog.log('OPEN_SESSION', 'cash_sessions', new_session.id, f"Caja abierta con monto inicial de S/ {opening_amount}", current_user.id)
     db.session.commit()
     
@@ -58,7 +60,6 @@ def close_session():
         return redirect(url_for('cashier.pos'))
         
     payments = Payment.query.filter_by(cash_session_id=current_session.id, status='completed').all()
-    from app.models.cash_expense import CashExpense
     expenses = CashExpense.query.filter_by(cash_session_id=current_session.id).all()
     
     total_sales = sum(float(p.amount) for p in payments)
@@ -68,12 +69,11 @@ def close_session():
     
     closing_amount = safe_float(request.form.get('closing_amount'), default=expected_amount)
     
-    current_session.closing_time = datetime.utcnow()
+    current_session.closing_time = datetime.now(timezone.utc)
     current_session.closing_amount = closing_amount
     current_session.expected_amount = expected_amount
     current_session.status = 'closed'
     
-    from app.models.audit_log import AuditLog
     AuditLog.log('CLOSE_SESSION', 'cash_sessions', current_session.id, f"Caja cerrada. Monto Esperado: S/ {expected_amount}, Ingresado: S/ {closing_amount}", current_user.id)
     db.session.commit()
     
@@ -93,7 +93,6 @@ def add_expense():
     reason = request.form.get('reason')
     
     try:
-        from app.models.cash_expense import CashExpense
         expense = CashExpense(
             cash_session_id=current_session.id,
             user_id=current_user.id,
@@ -102,7 +101,6 @@ def add_expense():
         )
         db.session.add(expense)
         
-        from app.models.audit_log import AuditLog
         AuditLog.log('CASH_EXPENSE', 'cash_expenses', current_session.id, f"Egreso de caja: S/ {amount} por {reason}", current_user.id)
         
         db.session.commit()
@@ -138,9 +136,11 @@ def pay(order_id):
         flash('No hay caja abierta. Es necesario que un Administrador abra la caja antes de poder cobrar.', 'danger')
         return redirect(url_for('cashier.pos'))
 
-    order = Order.query.get_or_404(order_id)
+    # Bloqueo pesimista: Evitar cobros dobles con concurrencia real
+    order = db.session.query(Order).with_for_update().get(order_id)
+    if not order:
+        abort(404)
     
-    # Bloqueo de concurrencia: Evitar cobros dobles si alguien clica múltiples veces
     if order.status == 'paid':
         flash('Seguridad: Esta orden ya fue cobrada previamente.', 'warning')
         return redirect(url_for('cashier.pos'))
@@ -161,14 +161,20 @@ def pay(order_id):
         db.session.add(payment)
         db.session.flush() 
         
-        prefix = 'B001' if invoice_type == 'boleta' else 'F001'
-        last_invoice = Invoice.query.filter(Invoice.document_number.like(f"{prefix}-%")).order_by(Invoice.id.desc()).first()
-        next_num = 1
-        if last_invoice:
-            try:
-                next_num = int(last_invoice.document_number.split('-')[1]) + 1
-            except (ValueError, IndexError):
-                next_num = random.randint(100000, 999999)
+        # Secuencia atómica de facturación (evita duplicados por concurrencia)
+        try:
+            seq_name = 'boleta_seq' if invoice_type == 'boleta' else 'factura_seq'
+            next_num = db.session.execute(db.text(f"SELECT nextval('{seq_name}')")).scalar()
+        except Exception:
+            # Fallback si las secuencias no existen aún
+            last_invoice = Invoice.query.filter(Invoice.document_number.like(f"{prefix}-%")).order_by(Invoice.id.desc()).first()
+            next_num = 1
+            if last_invoice:
+                try:
+                    next_num = int(last_invoice.document_number.split('-')[1]) + 1
+                except (ValueError, IndexError):
+                    import random
+                    next_num = random.randint(100000, 999999)
         doc_number = f"{prefix}-{next_num:06d}"
         
         total = float(amount)
@@ -210,7 +216,7 @@ def pay(order_id):
     except Exception as e:
         db.session.rollback()
         flash('Ocurrió un error al procesar el pago.', 'danger')
-        print(e)
+        logger.exception("Error procesando pago para orden %s", order_id)
         
     return redirect(url_for('cashier.pos'))
 

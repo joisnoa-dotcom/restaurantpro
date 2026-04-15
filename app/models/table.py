@@ -1,5 +1,5 @@
 from app import db
-from datetime import datetime
+from datetime import datetime, timezone
 
 class Table(db.Model):
     __tablename__ = 'tables'
@@ -9,6 +9,6 @@ class Table(db.Model):
     status = db.Column(db.String(50), default='free')
     location = db.Column(db.String(100))
     qr_code = db.Column(db.String(255))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     
     orders = db.relationship('Order', backref='table_rel', lazy=True)

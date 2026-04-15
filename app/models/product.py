@@ -1,5 +1,7 @@
 from app import db
-from datetime import datetime
+from datetime import datetime, timezone
+
+_now_utc = lambda: datetime.now(timezone.utc)
 
 class Product(db.Model):
     __tablename__ = 'products'
@@ -14,7 +16,7 @@ class Product(db.Model):
     track_stock = db.Column(db.Boolean, default=False)
     stock = db.Column(db.Integer, default=0)
     preparation_time = db.Column(db.Integer, default=0)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime(timezone=True), default=_now_utc)
+    updated_at = db.Column(db.DateTime(timezone=True), default=_now_utc, onupdate=_now_utc)
     
     order_items = db.relationship('OrderItem', backref='product', lazy=True)
