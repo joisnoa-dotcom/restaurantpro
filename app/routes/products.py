@@ -34,6 +34,7 @@ def create():
         name = request.form.get('name')
         description = request.form.get('description')
         price = safe_float(request.form.get('price'), default=0.0)
+        cost = safe_float(request.form.get('cost'), default=0.0)
         category_id = safe_int(request.form.get('category_id'), nullable=True)
         preparation_time = safe_int(request.form.get('preparation_time'), default=0)
         track_stock = 'track_stock' in request.form
@@ -62,6 +63,7 @@ def create():
             name=name,
             description=description,
             price=price,
+            cost=cost,
             category_id=category_id,
             preparation_time=preparation_time,
             track_stock=track_stock,
@@ -93,6 +95,7 @@ def edit(id):
         product.name = request.form.get('name')
         product.description = request.form.get('description')
         product.price = safe_float(request.form.get('price'), default=0.0)
+        product.cost = safe_float(request.form.get('cost'), default=0.0)
         product.category_id = safe_int(request.form.get('category_id'), nullable=True)
         product.preparation_time = safe_int(request.form.get('preparation_time'), default=0)
         product.is_available = 'is_available' in request.form
