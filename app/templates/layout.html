@@ -345,15 +345,16 @@
                     (payload) => {
                       const currentPath = window.location.pathname;
                       
-                      // Rutas de visualización segura (colas de atencion) donde la recarga es útil
-                      const autoReloadPaths = ['/dashboard', '/dashboard/', '/tables', '/tables/', '/orders/kitchen', '/cashier', '/cashier/', '/orders', '/orders/', '/products', '/products/'];
+                      // Rutas base de visualización segura (colas de atencion) donde la recarga es útil
+                      const autoReloadPaths = ['/dashboard', '/tables', '/orders', '/cashier', '/products'];
                       
-                      let shouldReload = autoReloadPaths.includes(currentPath);
+                      // Verificar si la ruta actual empieza con alguna de las rutas seguras
+                      let shouldReload = autoReloadPaths.some(path => currentPath.startsWith(path));
                       
                       // MECANISMO DE SEGURIDAD:
                       // Si hay un formulario interactivo abierto (un Modal), NUNCA recargar la página 
                       // o de lo contrario le borraremos lo que el usuario está tipeando.
-                      if (document.querySelector('.modal.show')) {
+                      if (document.querySelector('.modal.show') || currentPath.includes('/edit') || currentPath.includes('/create') || currentPath.includes('/pay')) {
                           shouldReload = false;
                       }
 
