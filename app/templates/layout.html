@@ -344,12 +344,28 @@
                     { event: '*', schema: 'public' },
                     (payload) => {
                       const currentPath = window.location.pathname;
-                      // Refrescar si estamos en monitor, ordenes, dashboard, u otras visuales
-                      if (currentPath.includes('/tables') || currentPath.includes('/orders') || currentPath.includes('/products') || currentPath.includes('/dashboard')) { 
+                      
+                      // Rutas de visualización segura (colas de atencion) donde la recarga es útil
+                      const autoReloadPaths = ['/dashboard', '/dashboard/', '/tables', '/tables/', '/orders/kitchen', '/cashier', '/cashier/', '/orders', '/orders/', '/products', '/products/'];
+                      
+                      let shouldReload = autoReloadPaths.includes(currentPath);
+                      
+                      // MECANISMO DE SEGURIDAD:
+                      // Si hay un formulario interactivo abierto (un Modal), NUNCA recargar la página 
+                      // o de lo contrario le borraremos lo que el usuario está tipeando.
+                      if (document.querySelector('.modal.show')) {
+                          shouldReload = false;
+                      }
+
+                      if (shouldReload) { 
                           if (!sessionStorage.getItem('notificacion_plato')) {
-                              Toast.fire({ icon: 'info', title: '¡Actualizando datos...!' });
+                              Toast.fire({ icon: 'info', title: 'Sincronizando información en vivo...' });
                           }
-                          setTimeout(() => { window.location.href = window.location.href; }, 1000); 
+                          setTimeout(() => { window.location.reload(); }, 1200); 
+                      } else {
+                          // Si no es seguro porque está tipeando un cobro o tomando una orden, no truncamos su accion
+                          // solo emitimos la notificacion visual.
+                          Toast.fire({ icon: 'success', title: 'Nueva actividad en el restaurante.' });
                       }
                     }
                   )
