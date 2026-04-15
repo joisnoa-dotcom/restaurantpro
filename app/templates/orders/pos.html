@@ -338,7 +338,8 @@
         fetch("{{ url_for('orders.submit_pos', table_id=table.id) }}", {
             method: "POST",
             headers: {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "X-CSRFToken": "{{ csrf_token() }}"
             },
             body: JSON.stringify({ cart: carrito })
         })
