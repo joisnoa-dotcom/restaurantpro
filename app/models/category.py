@@ -11,4 +11,4 @@ class Category(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     
-    products = db.relationship('Product', backref='category', cascade='all, delete-orphan', lazy=True)
+    products = db.relationship('Product', backref='category', cascade='save-update, merge', lazy=True)

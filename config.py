@@ -32,14 +32,22 @@ class Config:
             SQLALCHEMY_DATABASE_URI = SQLALCHEMY_DATABASE_URI.replace("postgresql://", "postgresql+pg8000://", 1)
             
     import ssl
+    
+    is_production = os.environ.get('VERCEL') is not None and os.environ.get('VERCEL') != False
+    
     ssl_ctx = ssl.create_default_context()
-    # Mantenemos la conexión ENCRIPTADA, pero relajamos la verificación del certificado.
-    # El pooler de Supabase usa certificados que lanzan CERTIFICATE_VERIFY_FAILED
-    # en entornos serverless sin el certificado raíz explícito instalado.
-    ssl_ctx.check_hostname = False
-    ssl_ctx.verify_mode = ssl.CERT_NONE
+    if is_production:
+        # PRODUCCIÓN (Vercel): Verificar certificado TLS del pooler de Supabase.
+        # check_hostname=False porque el pooler usa IP-based routing (no hostname SNI),
+        # pero verify_mode=CERT_REQUIRED asegura que el certificado sea válido (protección MITM).
+        ssl_ctx.check_hostname = False
+        ssl_ctx.verify_mode = ssl.CERT_REQUIRED
+    else:
+        # DESARROLLO LOCAL: Relajar verificación para conexiones locales/de prueba.
+        ssl_ctx.check_hostname = False
+        ssl_ctx.verify_mode = ssl.CERT_NONE
 
-    if os.environ.get('VERCEL') != False and os.environ.get('VERCEL') is not None:
+    if is_production:
         from sqlalchemy.pool import NullPool
         SQLALCHEMY_ENGINE_OPTIONS = {
             "poolclass": NullPool,

@@ -1,263 +1,293 @@
 -- ==========================================================
 -- ESTRUCTURA COMPLETA DE BASE DE DATOS: RESTAURANTPRO
--- Generado con las últimas actualizaciones (Roles, Settings y Carta Digital)
+-- Motor: PostgreSQL 17 (Supabase)
+-- Última actualización: Abril 2026
 -- ==========================================================
-
-SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
-START TRANSACTION;
-SET time_zone = "+00:00";
 
 -- --------------------------------------------------------
 -- 1. Tabla `categories`
 -- --------------------------------------------------------
-CREATE TABLE `categories` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `name` varchar(50) NOT NULL,
-  `description` text DEFAULT NULL,
-  `icon` varchar(50) DEFAULT NULL,
-  `color` varchar(7) DEFAULT '#007bff',
-  `is_active` tinyint(1) DEFAULT 1,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE IF NOT EXISTS categories (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    icon VARCHAR(50),
+    color VARCHAR(20) DEFAULT '#007bff',
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
 -- --------------------------------------------------------
 -- 2. Tabla `users`
 -- --------------------------------------------------------
-CREATE TABLE `users` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `username` varchar(50) NOT NULL,
-  `email` varchar(100) NOT NULL,
-  `password_hash` varchar(255) NOT NULL,
-  `full_name` varchar(100) NOT NULL,
-  `role` enum('admin','cashier','waiter','chef') DEFAULT 'waiter',
-  `is_active` tinyint(1) DEFAULT 1,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  `last_login` timestamp NULL DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `username` (`username`),
-  UNIQUE KEY `email` (`email`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    full_name VARCHAR(100),
+    username VARCHAR(50) NOT NULL UNIQUE,
+    email VARCHAR(120) UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    role VARCHAR(50) DEFAULT 'waiter',
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
 -- --------------------------------------------------------
 -- 3. Tabla `settings`
 -- --------------------------------------------------------
-CREATE TABLE `settings` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `name` varchar(100) DEFAULT 'RestaurantPro',
-  `subtitle` varchar(100) DEFAULT 'Sistema POS',
-  `ruc` varchar(20) DEFAULT '',
-  `address` varchar(200) DEFAULT '',
-  `phone` varchar(20) DEFAULT '',
-  `thank_you_message` varchar(200) DEFAULT '¡Gracias por su preferencia!',
-  `logo_url` varchar(255) DEFAULT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE IF NOT EXISTS settings (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(150) DEFAULT 'RestaurantPro',
+    subtitle VARCHAR(150) DEFAULT 'Sistema POS',
+    ruc VARCHAR(20) DEFAULT '',
+    address VARCHAR(200) DEFAULT '',
+    phone VARCHAR(50) DEFAULT '',
+    thank_you_message VARCHAR(200) DEFAULT '¡Gracias por su preferencia!',
+    logo_url VARCHAR(255)
+);
 
 -- --------------------------------------------------------
 -- 4. Tabla `tables`
 -- --------------------------------------------------------
-CREATE TABLE `tables` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `number` int(11) NOT NULL,
-  `capacity` int(11) NOT NULL DEFAULT 4,
-  `status` enum('free','occupied','reserved','maintenance') DEFAULT 'free',
-  `location` varchar(50) DEFAULT NULL,
-  `qr_code` varchar(255) DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `number` (`number`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE IF NOT EXISTS tables (
+    id SERIAL PRIMARY KEY,
+    number INTEGER NOT NULL UNIQUE,
+    capacity INTEGER NOT NULL DEFAULT 4,
+    status VARCHAR(50) DEFAULT 'free',
+    location VARCHAR(100),
+    qr_code VARCHAR(255),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
 -- --------------------------------------------------------
 -- 5. Tabla `products`
 -- --------------------------------------------------------
-CREATE TABLE `products` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `name` varchar(100) NOT NULL,
-  `description` text DEFAULT NULL,
-  `price` decimal(10,2) NOT NULL,
-  `cost` decimal(10,2) DEFAULT 0.00,
-  `image_url` varchar(255) DEFAULT NULL,
-  `category_id` int(11) NOT NULL,
-  `is_available` tinyint(1) DEFAULT 1,
-  `track_stock` tinyint(1) DEFAULT 0,
-  `stock` int(11) DEFAULT 0,
-  `preparation_time` int(11) DEFAULT 15,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  PRIMARY KEY (`id`),
-  KEY `category_id` (`category_id`),
-  CONSTRAINT `products_ibfk_1` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE IF NOT EXISTS products (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(150) NOT NULL,
+    description TEXT,
+    price NUMERIC(10,2) DEFAULT 0.00,
+    cost NUMERIC(10,2) DEFAULT 0.00,
+    image_url VARCHAR(255),
+    category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
+    is_available BOOLEAN DEFAULT TRUE,
+    track_stock BOOLEAN DEFAULT FALSE,
+    stock INTEGER DEFAULT 0,
+    preparation_time INTEGER DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_products_category_id ON products(category_id);
 
 -- --------------------------------------------------------
--- 6. Tabla `orders` 
--- IMPORTANTE: user_id ahora permite valores nulos (DEFAULT NULL)
+-- 6. Tabla `orders`
 -- --------------------------------------------------------
-CREATE TABLE `orders` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `table_id` int(11) DEFAULT NULL,
-  `user_id` int(11) DEFAULT NULL, 
-  `order_type` enum('dine_in','takeaway','delivery') DEFAULT 'dine_in',
-  `customer_name` varchar(100) DEFAULT NULL,
-  `customer_phone` varchar(20) DEFAULT NULL,
-  `delivery_address` text DEFAULT NULL,
-  `delivery_fee` decimal(10,2) DEFAULT 0.00,
-  `order_number` varchar(20) NOT NULL,
-  `status` enum('pending','preparing','ready','served','paid','cancelled') DEFAULT 'pending',
-  `total_amount` decimal(10,2) DEFAULT 0.00,
-  `notes` text DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `order_number` (`order_number`),
-  KEY `table_id` (`table_id`),
-  KEY `user_id` (`user_id`),
-  KEY `idx_orders_status` (`status`),
-  KEY `idx_orders_created` (`created_at`),
-  CONSTRAINT `orders_ibfk_1` FOREIGN KEY (`table_id`) REFERENCES `tables` (`id`),
-  CONSTRAINT `orders_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE IF NOT EXISTS orders (
+    id SERIAL PRIMARY KEY,
+    table_id INTEGER REFERENCES tables(id),
+    user_id INTEGER REFERENCES users(id),
+    order_type VARCHAR(50) DEFAULT 'dine_in',
+    customer_name VARCHAR(100),
+    customer_phone VARCHAR(50),
+    delivery_address TEXT,
+    delivery_fee NUMERIC(10,2) DEFAULT 0.00,
+    order_number VARCHAR(50) UNIQUE,
+    status VARCHAR(50) DEFAULT 'pending',
+    total_amount NUMERIC(10,2) DEFAULT 0.00,
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT chk_order_type CHECK (order_type IN ('dine_in', 'takeaway', 'delivery')),
+    CONSTRAINT chk_order_status CHECK (status IN ('pending', 'preparing', 'ready', 'served', 'paid', 'cancelled'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
+CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at);
+CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders(user_id);
 
 -- --------------------------------------------------------
 -- 7. Tabla `order_items`
 -- --------------------------------------------------------
-CREATE TABLE `order_items` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `order_id` int(11) NOT NULL,
-  `product_id` int(11) NOT NULL,
-  `quantity` int(11) NOT NULL DEFAULT 1,
-  `unit_price` decimal(10,2) NOT NULL,
-  `subtotal` decimal(10,2) NOT NULL,
-  `status` enum('pending','preparing','ready','delivered','cancelled') DEFAULT 'pending',
-  `notes` text DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  PRIMARY KEY (`id`),
-  KEY `order_id` (`order_id`),
-  KEY `product_id` (`product_id`),
-  KEY `idx_order_items_status` (`status`),
-  CONSTRAINT `order_items_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `order_items_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE IF NOT EXISTS order_items (
+    id SERIAL PRIMARY KEY,
+    order_id INTEGER REFERENCES orders(id) ON DELETE CASCADE,
+    product_id INTEGER REFERENCES products(id),
+    quantity INTEGER NOT NULL DEFAULT 1,
+    unit_price NUMERIC(10,2),
+    subtotal NUMERIC(10,2),
+    status VARCHAR(50) DEFAULT 'pending',
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT chk_order_item_status CHECK (status IN ('pending', 'preparing', 'ready', 'delivered', 'cancelled'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_order_items_status ON order_items(status);
 
 -- --------------------------------------------------------
--- Nueva Tabla: `cash_sessions`
+-- 8. Tabla `cash_sessions`
 -- --------------------------------------------------------
-CREATE TABLE `cash_sessions` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `user_id` int(11) NOT NULL,
-  `opening_time` datetime NOT NULL,
-  `closing_time` datetime DEFAULT NULL,
-  `opening_amount` decimal(10,2) NOT NULL,
-  `closing_amount` decimal(10,2) DEFAULT NULL,
-  `expected_amount` decimal(10,2) DEFAULT NULL,
-  `status` enum('open','closed') DEFAULT 'open',
-  PRIMARY KEY (`id`),
-  KEY `user_id` (`user_id`),
-  CONSTRAINT `cash_sessions_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE IF NOT EXISTS cash_sessions (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    opening_time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    closing_time TIMESTAMPTZ,
+    opening_amount NUMERIC(10,2) NOT NULL,
+    closing_amount NUMERIC(10,2),
+    expected_amount NUMERIC(10,2),
+    status VARCHAR(50) DEFAULT 'open',
+    CONSTRAINT chk_cash_session_status CHECK (status IN ('open', 'closed'))
+);
 
 -- --------------------------------------------------------
--- Nueva Tabla: `cash_expenses` (Egresos de caja físicos)
+-- 9. Tabla `cash_expenses`
 -- --------------------------------------------------------
-CREATE TABLE `cash_expenses` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `cash_session_id` int(11) NOT NULL,
-  `user_id` int(11) DEFAULT NULL,
-  `amount` decimal(10,2) NOT NULL,
-  `reason` text NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  PRIMARY KEY (`id`),
-  KEY `cash_session_id` (`cash_session_id`),
-  KEY `user_id` (`user_id`),
-  CONSTRAINT `cash_expenses_ibfk_1` FOREIGN KEY (`cash_session_id`) REFERENCES `cash_sessions` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `cash_expenses_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE IF NOT EXISTS cash_expenses (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    cash_session_id INTEGER REFERENCES cash_sessions(id),
+    amount NUMERIC(10,2) NOT NULL,
+    reason VARCHAR(255) NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
 -- --------------------------------------------------------
--- 8. Tabla `payments`
+-- 10. Tabla `payments`
 -- --------------------------------------------------------
-CREATE TABLE `payments` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `order_id` int(11) NOT NULL,
-  `amount` decimal(10,2) NOT NULL,
-  `payment_method` enum('cash','card','yape','plin','transfer') NOT NULL,
-  `reference_code` varchar(50) DEFAULT NULL,
-  `status` enum('pending','completed','failed','refunded') DEFAULT 'pending',
-  `created_by` int(11) NOT NULL,
-  `cash_session_id` int(11) DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  PRIMARY KEY (`id`),
-  KEY `order_id` (`order_id`),
-  KEY `created_by` (`created_by`),
-  KEY `idx_payments_date` (`created_at`),
-  KEY `cash_session_id` (`cash_session_id`),
-  CONSTRAINT `payments_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`),
-  CONSTRAINT `payments_ibfk_2` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`),
-  CONSTRAINT `payments_ibfk_3` FOREIGN KEY (`cash_session_id`) REFERENCES `cash_sessions` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE IF NOT EXISTS payments (
+    id SERIAL PRIMARY KEY,
+    order_id INTEGER REFERENCES orders(id),
+    amount NUMERIC(10,2) NOT NULL,
+    payment_method VARCHAR(50) NOT NULL,
+    reference_code VARCHAR(100),
+    status VARCHAR(50) DEFAULT 'pending',
+    created_by INTEGER REFERENCES users(id),
+    cash_session_id INTEGER REFERENCES cash_sessions(id),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT chk_payment_method CHECK (payment_method IN ('cash', 'card', 'yape', 'plin', 'transfer')),
+    CONSTRAINT chk_payment_status CHECK (status IN ('pending', 'completed', 'failed', 'refunded'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_payments_date ON payments(created_at);
+CREATE INDEX IF NOT EXISTS idx_payments_created_by ON payments(created_by);
 
 -- --------------------------------------------------------
--- 9. Tabla `invoices`
+-- 11. Tabla `invoices`
 -- --------------------------------------------------------
-CREATE TABLE `invoices` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `payment_id` int(11) NOT NULL,
-  `invoice_type` enum('boleta','factura') NOT NULL,
-  `document_number` varchar(20) NOT NULL,
-  `customer_name` varchar(100) DEFAULT NULL,
-  `customer_document` varchar(20) DEFAULT NULL,
-  `customer_address` text DEFAULT NULL,
-  `subtotal` decimal(10,2) NOT NULL,
-  `tax_amount` decimal(10,2) NOT NULL,
-  `total_amount` decimal(10,2) NOT NULL,
-  `pdf_path` varchar(255) DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `document_number` (`document_number`),
-  KEY `payment_id` (`payment_id`),
-  CONSTRAINT `invoices_ibfk_1` FOREIGN KEY (`payment_id`) REFERENCES `payments` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE IF NOT EXISTS invoices (
+    id SERIAL PRIMARY KEY,
+    payment_id INTEGER REFERENCES payments(id),
+    invoice_type VARCHAR(50) NOT NULL,
+    document_number VARCHAR(50) UNIQUE,
+    customer_name VARCHAR(150),
+    customer_document VARCHAR(50),
+    customer_address TEXT,
+    subtotal NUMERIC(10,2),
+    tax_amount NUMERIC(10,2),
+    total_amount NUMERIC(10,2),
+    pdf_path VARCHAR(255),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT chk_invoice_type CHECK (invoice_type IN ('boleta', 'factura'))
+);
 
 -- --------------------------------------------------------
--- 10. Tabla `notifications`
+-- 12. Tabla `notifications`
 -- --------------------------------------------------------
-CREATE TABLE `notifications` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `user_id` int(11) DEFAULT NULL,
-  `type` enum('order_ready','payment_received','low_stock','system') NOT NULL,
-  `message` text NOT NULL,
-  `is_read` tinyint(1) DEFAULT 0,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  PRIMARY KEY (`id`),
-  KEY `user_id` (`user_id`),
-  CONSTRAINT `notifications_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE IF NOT EXISTS notifications (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    type VARCHAR(50) DEFAULT 'system',
+    message TEXT NOT NULL,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read);
 
 -- --------------------------------------------------------
--- 11. Tabla `audit_logs`
+-- 13. Tabla `audit_logs`
 -- --------------------------------------------------------
-CREATE TABLE `audit_logs` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `user_id` int(11) DEFAULT NULL,
-  `action` varchar(100) NOT NULL,
-  `table_affected` varchar(50) DEFAULT NULL,
-  `record_id` int(11) DEFAULT NULL,
-  `details` text DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  PRIMARY KEY (`id`),
-  KEY `user_id` (`user_id`),
-  CONSTRAINT `audit_logs_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    action VARCHAR(100) NOT NULL,
+    entity_type VARCHAR(50),
+    entity_id INTEGER,
+    details TEXT,
+    ip_address VARCHAR(50),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
--- ==========================================================
--- INSERCIÓN DE DATOS POR DEFECTO PARA INSTALACIÓN NUEVA
--- ==========================================================
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
 
--- Configuraciones de inicio
-INSERT INTO `settings` (`name`, `subtitle`, `ruc`, `address`, `phone`, `thank_you_message`) VALUES
-('RestaurantPro', 'Sistema POS', '00000000000', 'Tu Dirección Aquí', '', '¡Gracias por su preferencia!');
+-- --------------------------------------------------------
+-- 14. Tabla `app_signals` (Supabase Realtime)
+-- --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS app_signals (
+    id SERIAL PRIMARY KEY,
+    action VARCHAR(50) NOT NULL,
+    entity VARCHAR(50),
+    created_at TIMESTAMPTZ DEFAULT timezone('utc', now())
+);
 
-COMMIT;
+-- --------------------------------------------------------
+-- SECUENCIAS DE NEGOCIO
+-- --------------------------------------------------------
+CREATE SEQUENCE IF NOT EXISTS order_number_seq START 1;
+CREATE SEQUENCE IF NOT EXISTS boleta_seq START 1;
+CREATE SEQUENCE IF NOT EXISTS factura_seq START 1;
+
+-- --------------------------------------------------------
+-- ROW LEVEL SECURITY (RLS)
+-- --------------------------------------------------------
+-- Habilitar RLS en todas las tablas
+ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tables ENABLE ROW LEVEL SECURITY;
+ALTER TABLE products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE cash_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE cash_expenses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE invoices ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE app_signals ENABLE ROW LEVEL SECURITY;
+
+-- Políticas: acceso completo para postgres (backend Flask)
+DO $$ 
+DECLARE t TEXT;
+BEGIN
+  FOR t IN SELECT unnest(ARRAY['categories','users','settings','tables','products','orders','order_items','cash_sessions','cash_expenses','payments','invoices','notifications','audit_logs','app_signals'])
+  LOOP
+    EXECUTE format('CREATE POLICY IF NOT EXISTS service_role_full_access ON public.%I FOR ALL TO postgres USING (true) WITH CHECK (true)', t);
+  END LOOP;
+END $$;
+
+-- Política: anon solo puede leer app_signals (para Supabase Realtime)
+CREATE POLICY IF NOT EXISTS anon_read_signals ON public.app_signals FOR SELECT TO anon USING (true);
+
+-- --------------------------------------------------------
+-- TRIGGER: Auto-limpieza de app_signals (mantener 24h)
+-- --------------------------------------------------------
+CREATE OR REPLACE FUNCTION clean_old_app_signals()
+RETURNS trigger AS $$
+BEGIN
+  DELETE FROM public.app_signals WHERE created_at < NOW() - INTERVAL '24 hours';
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_clean_old_signals ON public.app_signals;
+CREATE TRIGGER trg_clean_old_signals
+  AFTER INSERT ON public.app_signals
+  FOR EACH STATEMENT
+  EXECUTE FUNCTION clean_old_app_signals();
+
+-- --------------------------------------------------------
+-- DATOS POR DEFECTO PARA INSTALACIÓN NUEVA
+-- --------------------------------------------------------
+INSERT INTO settings (name, subtitle, ruc, address, phone, thank_you_message)
+SELECT 'RestaurantPro', 'Sistema POS', '00000000000', 'Tu Dirección Aquí', '', '¡Gracias por su preferencia!'
+WHERE NOT EXISTS (SELECT 1 FROM settings LIMIT 1);

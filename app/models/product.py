@@ -11,7 +11,7 @@ class Product(db.Model):
     price = db.Column(db.Numeric(10, 2), default=0.0)
     cost = db.Column(db.Numeric(10, 2), default=0.0)
     image_url = db.Column(db.String(255))
-    category_id = db.Column(db.Integer, db.ForeignKey('categories.id', ondelete='CASCADE'))
+    category_id = db.Column(db.Integer, db.ForeignKey('categories.id', ondelete='SET NULL'), nullable=True)
     is_available = db.Column(db.Boolean, default=True)
     track_stock = db.Column(db.Boolean, default=False)
     stock = db.Column(db.Integer, default=0)

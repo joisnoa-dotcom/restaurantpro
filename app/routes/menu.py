@@ -4,18 +4,14 @@ from app.models.product import Product
 from app.models.category import Category
 from app.models.order import Order, OrderItem
 from app.models.notification import Notification
+from app.models.app_signal import AppSignal
 from app import db, csrf
 import random
 import string
 import time
-
-# Rate limiting en memoria (se resetea con cold starts, pero funciona durante instancias calientes)
-_rate_limit_store = {}
+from datetime import datetime, timezone, timedelta
 
 menu_bp = Blueprint('menu', __name__, url_prefix='/menu')
-
-from app.models.app_signal import AppSignal
-from datetime import datetime, timezone, timedelta
 
 def get_now_utc():
     return datetime.now(timezone.utc)

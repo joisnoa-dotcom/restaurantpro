@@ -55,7 +55,10 @@ def pos(table_id):
 @login_required
 @role_required('admin', 'cashier', 'waiter')
 def submit_pos(table_id):
-    table = Table.query.get_or_404(table_id)
+    # Bloqueo pesimista: evitar que dos meseros abran la misma mesa simultáneamente
+    table = db.session.query(Table).with_for_update().get(table_id)
+    if not table:
+        return {'success': False, 'error': 'Mesa no encontrada.'}, 404
     if table.status != 'free':
         return {'success': False, 'error': 'La mesa fue ocupada por otro usuario.'}, 400
         
@@ -114,25 +117,35 @@ def submit_pos(table_id):
 @login_required
 @role_required('admin', 'cashier', 'waiter')
 def create(table_id):
-    table = Table.query.get_or_404(table_id)
-    if table.status != 'free':
-        flash('Esta mesa ya está ocupada o no está disponible.', 'warning')
+    try:
+        # Bloqueo pesimista: evitar que dos meseros abran la misma mesa simultáneamente
+        table = db.session.query(Table).with_for_update().get(table_id)
+        if not table:
+            flash('Mesa no encontrada.', 'danger')
+            return redirect(url_for('tables.monitor'))
+        if table.status != 'free':
+            flash('Esta mesa ya está ocupada o no está disponible.', 'warning')
+            return redirect(url_for('tables.monitor'))
+
+        new_order = Order(
+            table_id=table.id,
+            user_id=current_user.id,
+            order_number=generate_order_number(),
+            status='pending',
+            total_amount=0
+        )
+        table.status = 'occupied'
+        db.session.add(new_order)
+        db.session.commit()
+        AppSignal.emit('order_created', 'orders')
+
+        flash(f'Pedido {new_order.order_number} iniciado para la Mesa {table.number}.', 'success')
+        return redirect(url_for('orders.details', id=new_order.id))
+    except Exception as e:
+        db.session.rollback()
+        logger.exception('Error creando orden para mesa %s', table_id)
+        flash('Error al crear el pedido. Intenta nuevamente.', 'danger')
         return redirect(url_for('tables.monitor'))
-
-    new_order = Order(
-        table_id=table.id,
-        user_id=current_user.id,
-        order_number=generate_order_number(),
-        status='pending',
-        total_amount=0
-    )
-    table.status = 'occupied'
-    db.session.add(new_order)
-    db.session.commit()
-    AppSignal.emit('order_created', 'orders')
-
-    flash(f'Pedido {new_order.order_number} iniciado para la Mesa {table.number}.', 'success')
-    return redirect(url_for('orders.details', id=new_order.id))
 
 @orders_bp.route('/create_external', methods=['POST'])
 @login_required
@@ -143,27 +156,33 @@ def create_external():
     customer_phone = request.form.get('customer_phone', '')
     delivery_address = request.form.get('delivery_address', '')
     delivery_fee = safe_float(request.form.get('delivery_fee'), default=0.0)
+    
+    try:
+        new_order = Order(
+            table_id=None,
+            user_id=current_user.id,
+            order_number=generate_order_number(),
+            order_type=order_type,
+            customer_name=customer_name,
+            customer_phone=customer_phone,
+            delivery_address=delivery_address if order_type == 'delivery' else None,
+            delivery_fee=delivery_fee if order_type == 'delivery' else 0.00,
+            status='pending',
+            total_amount=delivery_fee
+        )
         
-    new_order = Order(
-        table_id=None,
-        user_id=current_user.id,
-        order_number=generate_order_number(),
-        order_type=order_type,
-        customer_name=customer_name,
-        customer_phone=customer_phone,
-        delivery_address=delivery_address if order_type == 'delivery' else None,
-        delivery_fee=delivery_fee if order_type == 'delivery' else 0.00,
-        status='pending',
-        total_amount=delivery_fee
-    )
-    
-    db.session.add(new_order)
-    db.session.commit()
-    AppSignal.emit('external_order_created', 'orders')
-    
-    tipo_str = "Delivery" if order_type == 'delivery' else "Para Llevar"
-    flash(f'Pedido {new_order.order_number} ({tipo_str}) iniciado para {customer_name}.', 'success')
-    return redirect(url_for('orders.details', id=new_order.id))
+        db.session.add(new_order)
+        db.session.commit()
+        AppSignal.emit('external_order_created', 'orders')
+        
+        tipo_str = "Delivery" if order_type == 'delivery' else "Para Llevar"
+        flash(f'Pedido {new_order.order_number} ({tipo_str}) iniciado para {customer_name}.', 'success')
+        return redirect(url_for('orders.details', id=new_order.id))
+    except Exception as e:
+        db.session.rollback()
+        logger.exception('Error creando orden externa')
+        flash('Error al crear el pedido externo. Intenta nuevamente.', 'danger')
+        return redirect(url_for('tables.monitor'))
 
 @orders_bp.route('/<int:id>')
 @login_required

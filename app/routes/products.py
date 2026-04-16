@@ -1,4 +1,5 @@
 import os
+import time
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
 from flask_login import login_required
 from app.utils.decorators import role_required
@@ -45,7 +46,6 @@ def create():
         filename = None
         
         if image_file and image_file.filename != '' and allowed_file(image_file.filename):
-            import time
             filename = secure_filename(image_file.filename)
             file_ext = filename.rsplit('.', 1)[1].lower()
             new_filename = f"prod_{int(time.time())}.{file_ext}"
@@ -132,11 +132,12 @@ def edit(id):
 def delete(id):
     product = Product.query.get_or_404(id)
     try:
-        db.session.delete(product)
+        # Soft-delete: desactivar en lugar de eliminar para preservar historial de ventas
+        product.is_available = False
         db.session.commit()
         
-        flash('Producto eliminado correctamente.', 'success')
+        flash(f'El producto "{product.name}" ha sido desactivado correctamente. Puedes reactivarlo desde la edición.', 'success')
     except Exception as e:
         db.session.rollback()
-        flash('No se puede eliminar el producto porque está asociado a pedidos existentes. Se recomienda desactivarlo.', 'danger')
+        flash('Error al desactivar el producto.', 'danger')
     return redirect(url_for('products.index'))

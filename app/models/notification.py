@@ -19,29 +19,43 @@ class Notification(db.Model):
         
     @classmethod
     def get_unread_count(cls, user_id):
-        """Cuenta notificaciones no leídas: las del usuario + las globales (user_id=None)."""
+        """Cuenta notificaciones no leídas del usuario."""
         return cls.query.filter(
-            or_(cls.user_id == user_id, cls.user_id.is_(None)),
+            cls.user_id == user_id,
             cls.is_read == False
         ).count()
         
     @classmethod
     def get_by_user(cls, user_id, limit=20, unread_only=False):
-        """Obtiene notificaciones del usuario + las globales (user_id=None)."""
-        query = cls.query.filter(or_(cls.user_id == user_id, cls.user_id.is_(None)))
+        """Obtiene notificaciones del usuario."""
+        query = cls.query.filter(cls.user_id == user_id)
         if unread_only:
             query = query.filter_by(is_read=False)
         return query.order_by(cls.created_at.desc()).limit(limit).all()
         
     @classmethod
     def create(cls, message, type='system', user_id=None):
-        """Crea una notificación y la agrega a la sesión (sin commit).
+        """Crea una notificación. Si user_id=None (global), se duplica para cada usuario activo.
         El caller debe hacer db.session.commit() cuando la transacción esté completa."""
-        n = cls(message=message, type=type, user_id=user_id)
-        db.session.add(n)
-        db.session.flush()  # Genera el ID sin cerrar la transacción
-        return n
+        if user_id is not None:
+            # Notificación individual
+            n = cls(message=message, type=type, user_id=user_id)
+            db.session.add(n)
+            db.session.flush()
+            return n
+        else:
+            # Notificación global: crear una copia por cada usuario activo
+            from app.models.user import User
+            active_users = User.query.filter_by(is_active=True).all()
+            created = []
+            for user in active_users:
+                n = cls(message=message, type=type, user_id=user.id)
+                db.session.add(n)
+                created.append(n)
+            db.session.flush()
+            return created[0] if created else None
         
     def mark_as_read(self):
         self.is_read = True
         db.session.flush()
+

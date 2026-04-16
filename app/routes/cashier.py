@@ -152,6 +152,21 @@ def pay(order_id):
     customer_name = request.form.get('customer_name', 'Cliente Varios')
     customer_document = request.form.get('customer_document', '00000000')
     
+    # === VALIDACIONES DE SEGURIDAD ===
+    allowed_methods = ('cash', 'card', 'yape', 'plin', 'transfer')
+    if payment_method not in allowed_methods:
+        flash('Método de pago no válido.', 'danger')
+        return redirect(url_for('cashier.checkout', order_id=order_id))
+    
+    allowed_invoice_types = ('boleta', 'factura')
+    if invoice_type not in allowed_invoice_types:
+        flash('Tipo de comprobante no válido.', 'danger')
+        return redirect(url_for('cashier.checkout', order_id=order_id))
+    
+    if amount < float(order.total_amount):
+        flash(f'El monto (S/ {amount:.2f}) no puede ser menor al total de la orden (S/ {order.total_amount}).', 'danger')
+        return redirect(url_for('cashier.checkout', order_id=order_id))
+    
     try:
         payment = Payment(
             order_id=order.id, amount=amount, payment_method=payment_method,
@@ -179,8 +194,10 @@ def pay(order_id):
         doc_number = f"{prefix}-{next_num:06d}"
         
         total = float(amount)
-        subtotal = total
-        tax_amount = 0.0
+        # IGV 18% (Perú): El total ya incluye impuesto, se desglosa para el comprobante
+        tax_rate = 0.18
+        subtotal = round(total / (1 + tax_rate), 2)
+        tax_amount = round(total - subtotal, 2)
         
         invoice = Invoice(
             payment_id=payment.id, invoice_type=invoice_type, document_number=doc_number,

@@ -1,4 +1,5 @@
 import os
+import time
 from werkzeug.utils import secure_filename
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
 from flask_login import login_required
@@ -42,7 +43,6 @@ def index():
                 filename = secure_filename(file.filename)
                 
                 # Subir archivo al Storage de Supabase (asumimos el bucket "restaurant_assets")
-                import time
                 file_ext = filename.rsplit('.', 1)[1].lower()
                 new_filename = f"logo_{int(time.time())}.{file_ext}"
                 file_bytes = file.read()

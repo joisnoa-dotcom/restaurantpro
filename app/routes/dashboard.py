@@ -5,8 +5,11 @@ from app.models.table import Table
 from app.models.payment import Payment
 from app import db
 from sqlalchemy import func
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from app.utils.decorators import role_required # <-- Candado de seguridad
+
+# Timezone de Perú (UTC-5)
+PERU_TZ = timezone(timedelta(hours=-5))
 
 # Definimos el Blueprint para el dashboard
 dashboard_bp = Blueprint('dashboard', __name__)
@@ -15,7 +18,8 @@ dashboard_bp = Blueprint('dashboard', __name__)
 @login_required
 @role_required('admin') # <-- Solo Administradores entran aquí
 def index():
-    today = date.today()
+    # Usar timezone de Perú para que las ventas nocturnas se contabilicen correctamente
+    today = datetime.now(PERU_TZ).date()
 
     # 1. Tarjetas Rápidas
     # NUEVO: Contamos exactamente los platos que faltan salir de cocina
