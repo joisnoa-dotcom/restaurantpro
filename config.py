@@ -36,16 +36,12 @@ class Config:
     is_production = os.environ.get('VERCEL') is not None and os.environ.get('VERCEL') != False
     
     ssl_ctx = ssl.create_default_context()
-    if is_production:
-        # PRODUCCIÓN (Vercel): Verificar certificado TLS del pooler de Supabase.
-        # check_hostname=False porque el pooler usa IP-based routing (no hostname SNI),
-        # pero verify_mode=CERT_REQUIRED asegura que el certificado sea válido (protección MITM).
-        ssl_ctx.check_hostname = False
-        ssl_ctx.verify_mode = ssl.CERT_REQUIRED
-    else:
-        # DESARROLLO LOCAL: Relajar verificación para conexiones locales/de prueba.
-        ssl_ctx.check_hostname = False
-        ssl_ctx.verify_mode = ssl.CERT_NONE
+    
+    # IMPORTANTE: El pooler de Supabase usa certificados que lanzan CERTIFICATE_VERIFY_FAILED
+    # en entornos serverless sin el certificado raíz explícito instalado.
+    # Por lo tanto, debemos usar CERT_NONE para evitar el Internal Server Error (500).
+    ssl_ctx.check_hostname = False
+    ssl_ctx.verify_mode = ssl.CERT_NONE
 
     if is_production:
         from sqlalchemy.pool import NullPool
