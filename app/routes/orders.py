@@ -94,7 +94,8 @@ def submit_pos(table_id):
                     quantity=qty,
                     unit_price=product.price,
                     subtotal=subtotal,
-                    status='pending'
+                    status='pending',
+                    notes=item.get('notas', '')
                 )
                 db.session.add(order_item)
                 
