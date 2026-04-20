@@ -224,6 +224,7 @@ def pay(order_id):
             
             table.status = 'free'
             
+        AppSignal.emit('payment_completed', 'orders')
         db.session.commit()
         # (Supabase Realtime)
         if table:
