@@ -30,7 +30,10 @@ def index():
 
     # 1. Tarjetas Rápidas
     # NUEVO: Contamos exactamente los platos que faltan salir de cocina
-    pending_orders = OrderItem.query.filter(OrderItem.status.in_(['pending', 'preparing'])).count()
+    pending_orders = db.session.query(OrderItem).join(Order).filter(
+        OrderItem.status.in_(['pending', 'preparing']), 
+        Order.status.notin_(['cancelled', 'paid'])
+    ).count()
     free_tables = Table.query.filter_by(status='free').count()
     
     # Total de pedidos efectivos generados en el día (excluye anulados)
