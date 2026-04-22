@@ -232,12 +232,8 @@
     </div>
 
     <div class="controls">
-        {% if current_user.role == 'admin' %}
-        <a href="{{ url_for('reports.shifts') }}" class="btn btn-secondary">Volver al Historial</a>
-        {% else %}
-        <a href="{{ url_for('cashier.pos') }}" class="btn btn-secondary">Ir a Hub Caja</a>
-        {% endif %}
-        <button onclick="window.print()" class="btn">Imprimir Ticket Z</button>
+        <button onclick="if(window.opener){window.close()}else{location.href='{% if current_user.role == 'admin' %}{{ url_for('reports.shifts') }}{% else %}{{ url_for('cashier.pos') }}{% endif %}'}" class="btn btn-secondary">Cerrar</button>
+        <button onclick="window.print()" class="btn">Imprimir</button>
     </div>
 
 </body>
