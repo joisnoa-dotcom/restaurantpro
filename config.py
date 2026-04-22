@@ -49,15 +49,8 @@ class Config:
     # TODO: Configurar certificado CA raíz de Supabase explícitamente
     #       para habilitar CERT_REQUIRED en producción.
     # ─────────────────────────────────────────────────────────────────────
-    try:
-        import certifi
-        ssl_ctx.load_verify_locations(cafile=certifi.where())
-        ssl_ctx.check_hostname = True
-        ssl_ctx.verify_mode = ssl.CERT_REQUIRED
-    except ImportError:
-        # Fallback si certifi no está disponible
-        ssl_ctx.check_hostname = False
-        ssl_ctx.verify_mode = ssl.CERT_NONE
+    ssl_ctx.check_hostname = False
+    ssl_ctx.verify_mode = ssl.CERT_NONE
 
     if is_production:
         from sqlalchemy.pool import NullPool
