@@ -49,8 +49,12 @@ def login():
             login_user(user, remember=True)
             
             next_page = request.args.get('next')
-            if next_page and next_page.startswith('/') and not next_page.startswith('//'):
-                return redirect(next_page)
+            if next_page:
+                from urllib.parse import urlparse
+                parsed_next = urlparse(next_page)
+                # Solo permitir redirecciones si no tienen netloc (dominio) ni scheme (http/https)
+                if not parsed_next.netloc and not parsed_next.scheme and next_page.startswith('/'):
+                    return redirect(next_page)
                 
             # REDIRECCIÓN INTELIGENTE AL INICIAR SESIÓN
             if user.role == 'admin':

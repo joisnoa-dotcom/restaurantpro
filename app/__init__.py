@@ -112,5 +112,23 @@ def create_app(config_class=Config):
             return path
         # Fallback por compatibilidad con datos antiguos que puedan existir
         return url_for('static', filename=folder + path)
+        
+    @app.template_filter('peru_time')
+    def peru_time(dt):
+        """Convierte un datetime UTC a la zona horaria de Perú (UTC-5)"""
+        if not dt:
+            return dt
+        from datetime import timezone, timedelta
+        PERU_TZ = timezone(timedelta(hours=-5))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(PERU_TZ)
+        
+    @app.after_request
+    def add_security_headers(response):
+        response.headers['X-Frame-Options'] = 'DENY'
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+        return response
 
     return app
