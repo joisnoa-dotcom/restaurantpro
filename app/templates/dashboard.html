@@ -239,7 +239,7 @@
                 <div class="kpi-label">Ingresos de Hoy</div>
                 <div class="kpi-amount">S/ {{ "%.2f"|format(today_sales) }}</div>
             </div>
-            <div class="kpi-change trend-pos"><i class="bi bi-graph-up-arrow"></i> +14.2% vs Ayer</div>
+            <div class="kpi-change {% if sales_change_pct >= 0 %}trend-pos{% else %}trend-neg{% endif %}"><i class="bi bi-{% if sales_change_pct >= 0 %}graph-up-arrow{% else %}graph-down-arrow{% endif %}"></i> {{ "%+.1f"|format(sales_change_pct) }}% vs Ayer</div>
         </div>
 
         <div class="kpi-card">
@@ -248,7 +248,7 @@
                 <div class="kpi-label">Pedidos Hoy</div>
                 <div class="kpi-amount">{{ today_orders_count }}</div>
             </div>
-            <div class="kpi-change trend-pos"><i class="bi bi-graph-up-arrow"></i> +8.5% tickets</div>
+            <div class="kpi-change {% if orders_change_pct >= 0 %}trend-pos{% else %}trend-neg{% endif %}"><i class="bi bi-{% if orders_change_pct >= 0 %}graph-up-arrow{% else %}graph-down-arrow{% endif %}"></i> {{ "%+.1f"|format(orders_change_pct) }}% vs Ayer</div>
         </div>
 
         <div class="kpi-card">
@@ -257,7 +257,7 @@
                 <div class="kpi-label">Platos Pendientes</div>
                 <div class="kpi-amount">{{ pending_orders }}</div>
             </div>
-            <div class="kpi-change trend-neg"><i class="bi bi-hourglass-split"></i> A la Espera de Pedidos</div>
+            <div class="kpi-change {% if pending_orders > 0 %}trend-neg{% else %}trend-pos{% endif %}"><i class="bi bi-{% if pending_orders > 0 %}hourglass-split{% else %}check-circle-fill{% endif %}"></i> {% if pending_orders > 0 %}En cola de cocina{% else %}Sin pendientes{% endif %}</div>
         </div>
 
         <div class="kpi-card">
@@ -266,7 +266,7 @@
                 <div class="kpi-label">Mesas (Libres)</div>
                 <div class="kpi-amount">{{ free_tables }}</div>
             </div>
-            <div class="kpi-change trend-pos"><i class="bi bi-door-open-fill"></i> Recepcionando</div>
+            <div class="kpi-change trend-pos"><i class="bi bi-door-open-fill"></i> {{ free_tables }} de {{ total_tables }} disponibles</div>
         </div>
     </div>
 

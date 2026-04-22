@@ -9,6 +9,9 @@ from app.models.category import Category
 from app import db
 from app.utils.supabase_client import get_supabase
 from app.utils.formatters import safe_int, safe_float
+import logging
+
+logger = logging.getLogger(__name__)
 
 products_bp = Blueprint('products', __name__, url_prefix='/products')
 
@@ -63,8 +66,7 @@ def create():
                 public_url = get_supabase().storage.from_('restaurant_assets').get_public_url(new_filename)
                 filename = public_url
             except Exception as e:
-                import logging
-                logging.getLogger(__name__).exception('Error subiendo imagen de producto')
+                logger.exception('Error subiendo imagen de producto')
                 flash('Error al subir la imagen. Intenta nuevamente.', 'danger')
                 filename = None
             
@@ -118,7 +120,6 @@ def edit(id):
         # Manejo de nueva imagen si se sube una
         image_file = request.files.get('image')
         if image_file and image_file.filename != '' and allowed_file(image_file.filename):
-            import time
             filename = secure_filename(image_file.filename)
             file_ext = filename.rsplit('.', 1)[1].lower()
             new_filename = f"prod_{int(time.time())}.{file_ext}"
@@ -141,8 +142,7 @@ def edit(id):
                 public_url = get_supabase().storage.from_('restaurant_assets').get_public_url(new_filename)
                 product.image_url = public_url
             except Exception as e:
-                import logging
-                logging.getLogger(__name__).exception('Error subiendo imagen de producto')
+                logger.exception('Error subiendo imagen de producto')
                 flash('Error al subir la imagen. Intenta nuevamente.', 'danger')
             
         try:
@@ -150,8 +150,7 @@ def edit(id):
             flash('Producto actualizado correctamente.', 'success')
         except Exception as e:
             db.session.rollback()
-            import logging
-            logging.getLogger(__name__).exception('Error actualizando producto %s', id)
+            logger.exception('Error actualizando producto %s', id)
             flash('Error al actualizar el producto. Intenta nuevamente.', 'danger')
         return redirect(url_for('products.index'))
         

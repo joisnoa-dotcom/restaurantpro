@@ -50,6 +50,35 @@ def index():
         Payment.created_at < tomorrow_start_utc
     ).scalar() or 0.0
 
+    # KPI REALES: Calcular métricas de AYER para comparación real
+    yesterday_start_peru = today_start_peru - timedelta(days=1)
+    yesterday_start_utc = yesterday_start_peru.astimezone(timezone.utc)
+    
+    yesterday_sales = db.session.query(func.sum(Payment.amount)).filter(
+        Payment.status == 'completed',
+        Payment.created_at >= yesterday_start_utc,
+        Payment.created_at < today_start_utc
+    ).scalar() or 0.0
+    
+    yesterday_orders_count = Order.query.filter(
+        Order.created_at >= yesterday_start_utc,
+        Order.created_at < today_start_utc,
+        Order.status != 'cancelled'
+    ).count()
+    
+    # Calcular porcentajes reales de cambio
+    if float(yesterday_sales) > 0:
+        sales_change_pct = ((float(today_sales) - float(yesterday_sales)) / float(yesterday_sales)) * 100
+    else:
+        sales_change_pct = 100.0 if float(today_sales) > 0 else 0.0
+    
+    if yesterday_orders_count > 0:
+        orders_change_pct = ((today_orders_count - yesterday_orders_count) / yesterday_orders_count) * 100
+    else:
+        orders_change_pct = 100.0 if today_orders_count > 0 else 0.0
+    
+    total_tables = Table.query.count()
+
     # 2. Gráfico: Ingresos de los últimos 7 días (con timezone Perú)
     chart_labels = []
     chart_data = []
@@ -85,8 +114,11 @@ def index():
     return render_template('dashboard.html', 
                            pending_orders=pending_orders,
                            free_tables=free_tables,
+                           total_tables=total_tables,
                            today_orders_count=today_orders_count,
                            today_sales=today_sales,
+                           sales_change_pct=sales_change_pct,
+                           orders_change_pct=orders_change_pct,
                            chart_labels=chart_labels,
                            chart_data=chart_data,
                            recent_orders=recent_orders)

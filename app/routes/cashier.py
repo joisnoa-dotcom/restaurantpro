@@ -148,7 +148,7 @@ def pay(order_id):
         return redirect(url_for('cashier.pos'))
 
     # Bloqueo pesimista: Evitar cobros dobles con concurrencia real
-    order = db.session.query(Order).with_for_update().get(order_id)
+    order = db.session.get(Order, order_id, with_for_update=True)
     if not order:
         abort(404)
     

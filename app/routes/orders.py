@@ -56,7 +56,7 @@ def pos(table_id):
 @role_required('admin', 'cashier', 'waiter')
 def submit_pos(table_id):
     # Bloqueo pesimista: evitar que dos meseros abran la misma mesa simultáneamente
-    table = db.session.query(Table).with_for_update().get(table_id)
+    table = db.session.get(Table, table_id, with_for_update=True)
     if not table:
         return {'success': False, 'error': 'Mesa no encontrada.'}, 404
     if table.status != 'free':
@@ -121,7 +121,7 @@ def submit_pos(table_id):
 def create(table_id):
     try:
         # Bloqueo pesimista: evitar que dos meseros abran la misma mesa simultáneamente
-        table = db.session.query(Table).with_for_update().get(table_id)
+        table = db.session.get(Table, table_id, with_for_update=True)
         if not table:
             flash('Mesa no encontrada.', 'danger')
             return redirect(url_for('tables.monitor'))
@@ -154,6 +154,13 @@ def create(table_id):
 @role_required('admin', 'cashier', 'waiter')
 def create_external():
     order_type = request.form.get('order_type', 'takeaway')
+    
+    # Validar order_type contra valores permitidos (prevenir violación de CHECK constraint)
+    allowed_order_types = ('dine_in', 'takeaway', 'delivery')
+    if order_type not in allowed_order_types:
+        flash('Tipo de pedido no válido.', 'danger')
+        return redirect(url_for('tables.monitor'))
+    
     customer_name = request.form.get('customer_name', '')
     customer_phone = request.form.get('customer_phone', '')
     delivery_address = request.form.get('delivery_address', '')
@@ -204,7 +211,7 @@ def details(id):
 @login_required
 @role_required('admin', 'cashier', 'waiter')
 def add_item(id):
-    order = db.session.query(Order).with_for_update().get(id)
+    order = db.session.get(Order, id, with_for_update=True)
     if not order:
         abort(404)
     
@@ -215,9 +222,14 @@ def add_item(id):
     product_id = safe_int(request.form.get('product_id'))
     quantity = safe_int(request.form.get('quantity'), default=1)
     notes = request.form.get('notes', '')
+    
+    # Validación de cantidad (prevenir valores absurdos)
+    if quantity < 1 or quantity > 99:
+        flash('La cantidad debe estar entre 1 y 99.', 'danger')
+        return redirect(url_for('orders.details', id=order.id))
 
     # Bloqueo pesimista para evitar race condition en stock
-    product = db.session.query(Product).with_for_update().get(product_id)
+    product = db.session.get(Product, product_id, with_for_update=True)
     if not product:
         abort(404)
     
