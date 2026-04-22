@@ -13,7 +13,7 @@ ALLOWED_ROLES = ('admin', 'cashier', 'waiter', 'chef')
 @login_required
 @role_required('admin') # ¡Solo los administradores entran aquí!
 def index():
-    users = User.query.all()
+    users = User.query.order_by(User.is_active.desc(), User.username).all()
     return render_template('users/list.html', users=users)
 
 @users_bp.route('/create', methods=['POST'])
@@ -117,8 +117,15 @@ def delete(id):
         return redirect(url_for('users.index'))
         
     user = User.query.get_or_404(id)
-    user.is_active = False
-    db.session.commit()
-    flash(f'El usuario "{user.username}" ha sido desactivado. Puede reactivarse desde la edición.', 'success')
+    try:
+        db.session.delete(user)
+        db.session.commit()
+        flash(f'El usuario "{user.username}" ha sido eliminado permanentemente del sistema.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        # Fallback a soft delete si hay restricciones de FK (pedidos, pagos, etc.)
+        user.is_active = False
+        db.session.commit()
+        flash(f'El usuario "{user.username}" tiene transacciones o registros históricos (pedidos, caja). Por seguridad, ha sido DESACTIVADO permanentemente y ya no podrá iniciar sesión.', 'warning')
         
     return redirect(url_for('users.index'))
