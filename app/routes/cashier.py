@@ -9,7 +9,7 @@ from app.models.cash_register import CashSession
 from app.models.cash_expense import CashExpense
 from app.models.audit_log import AuditLog
 from app.models.app_signal import AppSignal
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from app import db
 from app.utils.formatters import safe_float
 import logging
@@ -24,7 +24,17 @@ cashier_bp = Blueprint('cashier', __name__, url_prefix='/cashier')
 def pos():
     active_orders = Order.query.filter(Order.status.notin_(['paid', 'cancelled'])).order_by(Order.created_at.desc()).all()
     current_session = CashSession.query.filter_by(status='open').first()
-    return render_template('cashier/pos.html', orders=active_orders, current_session=current_session)
+    
+    # Convertir hora de apertura a Perú para mostrar correctamente
+    opening_time_peru = None
+    if current_session and current_session.opening_time:
+        PERU_TZ = timezone(timedelta(hours=-5))
+        ot = current_session.opening_time
+        if ot.tzinfo is None:
+            ot = ot.replace(tzinfo=timezone.utc)
+        opening_time_peru = ot.astimezone(PERU_TZ)
+    
+    return render_template('cashier/pos.html', orders=active_orders, current_session=current_session, opening_time_peru=opening_time_peru)
 
 @cashier_bp.route('/open_session', methods=['POST'])
 @login_required
@@ -190,8 +200,10 @@ def pay(order_id):
                 try:
                     next_num = int(last_invoice.document_number.split('-')[1]) + 1
                 except (ValueError, IndexError):
-                    import random
-                    next_num = random.randint(100000, 999999)
+                    db.session.rollback()
+                    flash('Error crítico: No se pudo generar el número de comprobante. Contacta al administrador del sistema.', 'danger')
+                    logger.error('Fallo generando número de comprobante: secuencia inexistente y parse fallido para prefix %s', prefix)
+                    return redirect(url_for('cashier.checkout', order_id=order_id))
         doc_number = f"{prefix}-{next_num:06d}"
         
         total = float(amount)
@@ -247,8 +259,18 @@ def pay(order_id):
 
 @cashier_bp.route('/ticket/<int:order_id>')
 @login_required
+@role_required('admin', 'cashier')
 def ticket(order_id):
     order = Order.query.get_or_404(order_id)
     payment = Payment.query.filter_by(order_id=order.id).first()
     invoice = Invoice.query.filter_by(payment_id=payment.id).first() if payment else None
-    return render_template('cashier/ticket.html', order=order, payment=payment, invoice=invoice)
+    
+    # Convertir fechas a hora Perú para el ticket impreso
+    PERU_TZ = timezone(timedelta(hours=-5))
+    order_time_peru = order.created_at
+    if order_time_peru:
+        if order_time_peru.tzinfo is None:
+            order_time_peru = order_time_peru.replace(tzinfo=timezone.utc)
+        order_time_peru = order_time_peru.astimezone(PERU_TZ)
+    
+    return render_template('cashier/ticket.html', order=order, payment=payment, invoice=invoice, order_time_peru=order_time_peru)

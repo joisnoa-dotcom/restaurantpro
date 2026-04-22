@@ -307,8 +307,13 @@
                 {% if t.status == 'free' %}
                 <a href="{{ url_for('orders.pos', table_id=t.id) }}" class="btn btn-primary-custom w-100 btn-table">Abrir Pedido</a>
                 {% elif t.status == 'occupied' %}
+                {% if active_orders_map and t.id in active_orders_map %}
+                <a href="{{ url_for('orders.details', id=active_orders_map[t.id]) }}" class="btn btn-outline-danger w-100 btn-table"
+                    style="border-width: 2px;">Ver Pedido</a>
+                {% else %}
                 <a href="{{ url_for('orders.index') }}" class="btn btn-outline-danger w-100 btn-table"
                     style="border-width: 2px;">Ver Pedido</a>
+                {% endif %}
                 {% else %}
                 <button class="btn btn-light w-100 btn-table text-muted" style="background: #e2e8f0;" disabled>No
                     Disponible</button>

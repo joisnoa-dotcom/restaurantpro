@@ -6,6 +6,9 @@ from app.utils.decorators import role_required
 
 users_bp = Blueprint('users', __name__, url_prefix='/users')
 
+# Roles válidos del sistema — prevenir escalada de privilegios
+ALLOWED_ROLES = ('admin', 'cashier', 'waiter', 'chef')
+
 @users_bp.route('/')
 @login_required
 @role_required('admin') # ¡Solo los administradores entran aquí!
@@ -22,6 +25,11 @@ def create():
     password = request.form.get('password')
     full_name = request.form.get('full_name')
     role = request.form.get('role')
+    
+    # Validar rol permitido (prevenir escalada de privilegios)
+    if role not in ALLOWED_ROLES:
+        flash('Rol no válido. Selecciona un rol del sistema.', 'danger')
+        return redirect(url_for('users.index'))
     
     if not password or len(password.strip()) < 8:
         flash('La contraseña debe tener al menos 8 caracteres.', 'danger')
@@ -73,12 +81,27 @@ def edit(id):
     user.username = new_username
     user.email = new_email
     user.full_name = request.form.get('full_name')
-    user.role = request.form.get('role')
-    user.is_active = 'is_active' in request.form
+    
+    # Validar rol permitido (prevenir escalada de privilegios)
+    new_role = request.form.get('role')
+    if new_role not in ALLOWED_ROLES:
+        flash('Rol no válido. Selecciona un rol del sistema.', 'danger')
+        return redirect(url_for('users.index'))
+    user.role = new_role
+    
+    # Prevenir que el admin se desactive a sí mismo (dejaría el sistema sin admin)
+    new_is_active = 'is_active' in request.form
+    if user.id == current_user.id and not new_is_active:
+        flash('No puedes desactivar tu propia cuenta de administrador.', 'danger')
+        return redirect(url_for('users.index'))
+    user.is_active = new_is_active
     
     # Si el administrador escribió una nueva contraseña, la actualizamos
     new_password = request.form.get('password')
     if new_password and new_password.strip() != '':
+        if len(new_password.strip()) < 8:
+            flash('La nueva contraseña debe tener al menos 8 caracteres.', 'danger')
+            return redirect(url_for('users.index'))
         user.password_hash = bcrypt.generate_password_hash(new_password).decode('utf-8')
         
     db.session.commit()

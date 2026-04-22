@@ -2,6 +2,7 @@ import uuid
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required
 from app.models.table import Table
+from app.models.order import Order
 from app import db
 from app.utils.decorators import role_required
 from app.utils.formatters import safe_int
@@ -19,7 +20,15 @@ def index():
 @login_required
 def monitor():
     tables = Table.query.order_by(Table.number).all()
-    return render_template('tables/monitor.html', tables=tables)
+    
+    # Construir mapa de pedidos activos por mesa para link directo
+    active_orders = Order.query.filter(
+        Order.table_id.isnot(None),
+        Order.status.notin_(['paid', 'cancelled'])
+    ).all()
+    active_orders_map = {o.table_id: o.id for o in active_orders}
+    
+    return render_template('tables/monitor.html', tables=tables, active_orders_map=active_orders_map)
 
 @tables_bp.route('/create', methods=['POST'])
 @login_required
@@ -59,7 +68,14 @@ def edit(id):
         table.number = new_number
         table.capacity = safe_int(request.form.get('capacity'), default=4)
         table.location = request.form.get('location')
-        table.status = request.form.get('status')
+        
+        # Validar status permitido (prevenir inyección de estados arbitrarios)
+        new_status = request.form.get('status')
+        allowed_statuses = ('free', 'occupied', 'reserved', 'maintenance')
+        if new_status not in allowed_statuses:
+            flash('Estado de mesa no válido.', 'danger')
+            return redirect(url_for('tables.index'))
+        table.status = new_status
         
         # Si la mesa no tiene token (porque es antigua), le generamos uno
         if not table.qr_code:

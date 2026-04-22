@@ -56,7 +56,9 @@ def index():
                     public_url = get_supabase().storage.from_('restaurant_assets').get_public_url(new_filename)
                     setting.logo_url = public_url
                 except Exception as e:
-                    flash(f'Error subiendo imagen a Supabase: {str(e)}', 'danger')
+                    import logging
+                    logging.getLogger(__name__).exception('Error subiendo logo a Supabase')
+                    flash('Error al subir el logo. Intenta nuevamente.', 'danger')
 
         db.session.commit()
         flash('Datos de la empresa y logo actualizados exitosamente.', 'success')

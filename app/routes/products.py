@@ -63,7 +63,9 @@ def create():
                 public_url = get_supabase().storage.from_('restaurant_assets').get_public_url(new_filename)
                 filename = public_url
             except Exception as e:
-                flash(f'Error subiendo imagen a Supabase: {str(e)}', 'danger')
+                import logging
+                logging.getLogger(__name__).exception('Error subiendo imagen de producto')
+                flash('Error al subir la imagen. Intenta nuevamente.', 'danger')
                 filename = None
             
         new_product = Product(
@@ -139,7 +141,9 @@ def edit(id):
                 public_url = get_supabase().storage.from_('restaurant_assets').get_public_url(new_filename)
                 product.image_url = public_url
             except Exception as e:
-                flash(f'Error subiendo imagen a Supabase: {str(e)}', 'danger')
+                import logging
+                logging.getLogger(__name__).exception('Error subiendo imagen de producto')
+                flash('Error al subir la imagen. Intenta nuevamente.', 'danger')
             
         db.session.commit()
         

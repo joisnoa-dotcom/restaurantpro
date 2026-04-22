@@ -111,7 +111,8 @@ def submit_pos(table_id):
         
     except Exception as e:
         db.session.rollback()
-        return {'success': False, 'error': str(e)}, 500
+        logger.exception('Error en submit_pos para mesa %s', table_id)
+        return {'success': False, 'error': 'Error interno al procesar el pedido.'}, 500
 
 
 @orders_bp.route('/create/<int:table_id>', methods=['POST'])
@@ -271,6 +272,7 @@ def remove_item(item_id):
 
 @orders_bp.route('/kitchen')
 @login_required
+@role_required('admin', 'chef', 'cashier', 'waiter')
 def kitchen():
     pending_items = db.session.query(OrderItem).join(Order).filter(OrderItem.status.in_(['pending', 'preparing']), Order.status.notin_(['cancelled', 'paid'])).order_by(OrderItem.created_at).all()
     return render_template('orders/kitchen.html', items=pending_items)
@@ -343,6 +345,7 @@ def cancel(id):
 
 @orders_bp.route('/comanda/<int:order_id>')
 @login_required
+@role_required('admin', 'cashier', 'waiter')
 def comanda(order_id):
     order = Order.query.get_or_404(order_id)
     return render_template('orders/comanda.html', order=order)

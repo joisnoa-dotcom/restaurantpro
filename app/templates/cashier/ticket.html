@@ -46,7 +46,7 @@
     </div>
 
     <div class="mb-1">
-        <div>Fecha: {{ order.created_at.strftime('%d/%m/%Y %H:%M') }}</div>
+        <div>Fecha: {{ order_time_peru.strftime('%d/%m/%Y %H:%M') if order_time_peru else order.created_at.strftime('%d/%m/%Y %H:%M') }}</div>
         <div>Cajero: {{ current_user.username }}</div>
         <div>{% if order.table_rel %}Mesa: {{ order.table_rel.number }}{% else %}Pedido: {{ 'Delivery' if order.order_type == 'delivery' else 'Para Llevar' }}{% endif %}</div>
         {% if invoice %}
