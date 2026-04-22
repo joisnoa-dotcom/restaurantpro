@@ -285,7 +285,7 @@
             window.open(
                 '{{ url_for("cashier.ticket", order_id=0) }}'.replace('/0', '/' + popupTicket),
                 'ticket_venta',
-                'width=420,height=650,scrollbars=yes,resizable=yes'
+                'width=800,height=650,scrollbars=yes,resizable=yes'
             );
             // Limpiar URL para que no reabra al recargar
             window.history.replaceState({}, '', window.location.pathname);
@@ -297,7 +297,7 @@
             window.open(
                 '{{ url_for("reports.shift_ticket", session_id=0) }}'.replace('/0', '/' + popupShift),
                 'ticket_z',
-                'width=450,height=700,scrollbars=yes,resizable=yes'
+                'width=800,height=700,scrollbars=yes,resizable=yes'
             );
             // Limpiar URL para que no reabra al recargar
             window.history.replaceState({}, '', window.location.pathname);
