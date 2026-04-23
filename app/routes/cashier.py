@@ -91,6 +91,45 @@ def close_session():
     flash(f'Caja cerrada. Ventas puras: S/ {total_sales} | Egresos: S/ {total_expenses}. Tu Ticket Z se abrirá en instantes.', 'success')
     return redirect(url_for('cashier.pos', popup_shift=current_session.id))
 
+
+@cashier_bp.route('/close_session_auto', methods=['POST'])
+@login_required
+@role_required('admin')
+def close_session_auto():
+    """Cierre automático (sin arqueo): usa el monto esperado como cierre."""
+    current_session = CashSession.query.filter_by(status='open').first()
+    if not current_session:
+        flash('No hay ninguna caja abierta para cerrar.', 'warning')
+        return redirect(url_for('cashier.pos'))
+
+    payments = Payment.query.filter_by(cash_session_id=current_session.id, status='completed').all()
+    expenses = CashExpense.query.filter_by(cash_session_id=current_session.id).all()
+
+    total_sales = sum(float(p.amount) for p in payments)
+    cash_sales = sum(float(p.amount) for p in payments if p.payment_method == 'cash')
+    total_expenses = sum(float(e.amount) for e in expenses)
+    expected_amount = float(current_session.opening_amount) + cash_sales - total_expenses
+
+    current_session.closing_time = datetime.now(timezone.utc)
+    current_session.closing_amount = expected_amount
+    current_session.expected_amount = expected_amount
+    current_session.status = 'closed'
+
+    AuditLog.log(
+        'CLOSE_SESSION',
+        'cash_sessions',
+        current_session.id,
+        f"Caja cerrada (AUTO). Monto Esperado: S/ {expected_amount}, Ingresado: S/ {expected_amount}",
+        current_user.id
+    )
+    db.session.commit()
+
+    flash(
+        f'Caja cerrada automáticamente. Ventas puras: S/ {total_sales} | Egresos: S/ {total_expenses}. Tu Ticket Z se abrirá en instantes.',
+        'success'
+    )
+    return redirect(url_for('cashier.pos', popup_shift=current_session.id))
+
 @cashier_bp.route('/add_expense', methods=['POST'])
 @login_required
 @role_required('admin', 'cashier')
