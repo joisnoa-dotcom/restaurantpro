@@ -195,6 +195,18 @@
 
         <div class="divider"></div>
 
+        <div class="text-center font-bold" style="font-size: 0.9rem; margin-bottom: 5px;">FÓRMULA DE CUADRE</div>
+        <div class="item-row" style="font-size: 0.85rem;">
+            <span>Apertura + Efectivo - Egresos</span>
+            <span>= Esperado</span>
+        </div>
+        <div class="item-row" style="font-size: 0.85rem;">
+            <span>S/ {{ "%.2f"|format(session.opening_amount) }} + S/ {{ "%.2f"|format(cash_sales) }} - S/ {{ "%.2f"|format(total_expenses) }}</span>
+            <span class="font-bold">S/ {{ "%.2f"|format(session.expected_amount) }}</span>
+        </div>
+
+        <div class="divider"></div>
+
         <!-- CALCULO FINANCIERO -->
         <div class="item-row text-right" style="font-size: 0.8rem; flex-direction: column;">
             <div class="item-row" style="margin-bottom:0;">
